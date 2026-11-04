@@ -38,6 +38,8 @@ export const ProfileSchema = z.strictObject({
   photo: ImageRefSchema.optional(),
   location: z.string().trim().min(1).max(80),
   availability: AvailabilitySchema,
+  /** Shown as "<role> @ <company>" instead of "Not looking" when availability is not-looking. */
+  currentJob: z.strictObject({ role: z.string().trim().min(1).max(100), company: z.string().trim().min(1).max(80) }).optional(),
   socials: z.strictObject({ email: z.email(), linkedin: HttpsUrlSchema, github: HttpsUrlSchema }),
   cvUrl: CvUrlSchema.optional(),
 });

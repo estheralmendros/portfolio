@@ -111,6 +111,15 @@ describe('ProfileSchema', () => {
     bad(ProfileSchema, { ...profile, bio: 'x'.repeat(1001) });
   });
   it('rejects unknown keys (strict)', () => bad(ProfileSchema, { ...profile, extra: 1 }));
+  it('accepts an optional currentJob with role and company', () =>
+    ok(ProfileSchema, { ...profile, availability: 'not-looking', currentJob: { role: 'Senior Engineer', company: 'Acme' } }));
+  it('rejects a currentJob with an empty role or company, over-long values or unknown keys', () => {
+    bad(ProfileSchema, { ...profile, currentJob: { role: ' ', company: 'Acme' } });
+    bad(ProfileSchema, { ...profile, currentJob: { role: 'Engineer' } });
+    bad(ProfileSchema, { ...profile, currentJob: { role: 'x'.repeat(101), company: 'Acme' } });
+    bad(ProfileSchema, { ...profile, currentJob: { role: 'Engineer', company: 'x'.repeat(81) } });
+    bad(ProfileSchema, { ...profile, currentJob: { role: 'Engineer', company: 'Acme', since: '2024-01' } });
+  });
 });
 
 describe('ProjectSchema', () => {

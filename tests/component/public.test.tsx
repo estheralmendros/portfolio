@@ -34,6 +34,22 @@ describe('HeroSection', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Someone Else' })).toBeInTheDocument();
     expect(screen.getByText('Not looking')).toBeInTheDocument();
   });
+  it('not-looking with currentJob shows "<role> @ <company>" instead of "Not looking"', () => {
+    const currentJob = { role: 'Senior Engineer', company: 'Acme' };
+    render(<HeroSection profile={{ ...fixture.profile, availability: 'not-looking', currentJob }} />);
+    expect(screen.getByText('Senior Engineer @ Acme')).toBeInTheDocument();
+    expect(screen.queryByText('Not looking')).toBeNull();
+  });
+  it('currentJob is ignored unless availability is not-looking', () => {
+    const currentJob = { role: 'Senior Engineer', company: 'Acme' };
+    const { unmount } = render(<HeroSection profile={{ ...fixture.profile, availability: 'open', currentJob }} />);
+    expect(screen.getByText('Open to opportunities')).toBeInTheDocument();
+    expect(screen.queryByText(/Senior Engineer @ Acme/)).toBeNull();
+    unmount();
+    render(<HeroSection profile={{ ...fixture.profile, availability: 'freelance', currentJob }} />);
+    expect(screen.getByText('Available for freelance')).toBeInTheDocument();
+    expect(screen.queryByText(/Senior Engineer @ Acme/)).toBeNull();
+  });
   it('shows Download CV only with cvUrl, prefixed with the base', () => {
     const { unmount } = render(<HeroSection profile={fixture.profile} />);
     expect(screen.getByRole('link', { name: /Download CV/ })).toHaveAttribute('href', '/portfolio/docs/fixture-cv.pdf');

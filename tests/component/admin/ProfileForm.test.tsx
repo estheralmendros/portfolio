@@ -68,6 +68,37 @@ describe('ProfileForm', () => {
     expect(screen.getByText('Use an https:// URL or a /path to a PDF')).toBeInTheDocument();
   });
 
+  it('prefills Current role / Current company and saves currentJob right after availability', async () => {
+    const { onSave } = setup({ initial: profile({ availability: 'not-looking', currentJob: { role: 'Engineer', company: 'Acme' } }) });
+    expect(screen.getByLabelText(/^Current role/)).toHaveValue('Engineer');
+    expect(screen.getByLabelText(/^Current company/)).toHaveValue('Acme');
+    await userEvent.clear(screen.getByLabelText(/^Current company/));
+    await userEvent.type(screen.getByLabelText(/^Current company/), 'Globex');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = onSave.mock.calls[0]![0];
+    expect(saved.currentJob).toEqual({ role: 'Engineer', company: 'Globex' });
+    expect(Object.keys(saved)).toEqual(['name', 'title', 'bio', 'location', 'availability', 'currentJob', 'socials']);
+  });
+
+  it('both current job fields empty omit currentJob; only one filled marks the other Required', async () => {
+    const { onSave } = setup({ initial: profile({ currentJob: { role: 'Engineer', company: 'Acme' } }) });
+    await userEvent.clear(screen.getByLabelText(/^Current company/));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/^Current company/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Current company/)).toHaveFocus();
+    await userEvent.clear(screen.getByLabelText(/^Current role/));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).toHaveBeenCalledWith(profile());
+  });
+
+  it('the preview shows "<role> @ <company>" when Not looking', async () => {
+    setup({ initial: profile({ availability: 'not-looking' }) });
+    await userEvent.type(screen.getByLabelText(/^Current role/), 'Engineer');
+    await userEvent.type(screen.getByLabelText(/^Current company/), 'Acme');
+    expect(await screen.findByText('Engineer @ Acme')).toBeInTheDocument();
+  });
+
   it('a typed upload path in Photo is blocked; the loaded upload path saves', async () => {
     const { onSave } = setup();
     await userEvent.type(screen.getByLabelText(/^Photo/), 'src/assets/uploads/profile/profile-a1b2c3.jpg');

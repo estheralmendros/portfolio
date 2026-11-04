@@ -27,16 +27,21 @@ interface Values {
   photo: string;
   location: string;
   availability: Profile['availability'];
+  currentJobRole: string;
+  currentJobCompany: string;
   email: string;
   linkedin: string;
   github: string;
   cvUrl: string;
 }
-const FIELD_ORDER = ['name', 'title', 'bio', 'photo', 'location', 'availability', 'email', 'linkedin', 'github', 'cvUrl'] as const;
+const FIELD_ORDER = ['name', 'title', 'bio', 'photo', 'location', 'availability', 'currentJobRole', 'currentJobCompany', 'email', 'linkedin', 'github', 'cvUrl'] as const;
 type FieldName = (typeof FIELD_ORDER)[number];
 const REQUIRED: FieldName[] = ['name', 'title', 'bio', 'location', 'email', 'linkedin', 'github'];
 /** Zod paths that differ from the form field name. */
-const PATH_TO_FIELD: Record<string, FieldName> = { 'socials.email': 'email', 'socials.linkedin': 'linkedin', 'socials.github': 'github' };
+const PATH_TO_FIELD: Record<string, FieldName> = {
+  'socials.email': 'email', 'socials.linkedin': 'linkedin', 'socials.github': 'github',
+  'currentJob.role': 'currentJobRole', 'currentJob.company': 'currentJobCompany',
+};
 /** The profile photo's upload slug (Feature 3 step 4). */
 const PHOTO_SLUG = 'profile';
 
@@ -47,6 +52,8 @@ const toValues = (p: Profile): Values => ({
   photo: p.photo ?? '',
   location: p.location,
   availability: p.availability,
+  currentJobRole: p.currentJob?.role ?? '',
+  currentJobCompany: p.currentJob?.company ?? '',
   email: p.socials.email,
   linkedin: p.socials.linkedin,
   github: p.socials.github,
@@ -64,6 +71,10 @@ function toRaw(v: Values, upload: PendingUpload | null, cv: CvChange) {
     ...(photo !== '' ? { photo } : {}),
     location: v.location,
     availability: v.availability,
+    // Omitted when both are empty; one empty is a field error (validate).
+    ...(v.currentJobRole.trim() !== '' || v.currentJobCompany.trim() !== ''
+      ? { currentJob: { role: v.currentJobRole, company: v.currentJobCompany } }
+      : {}),
     socials: { email: v.email.trim(), linkedin: v.linkedin.trim(), github: v.github.trim() },
     ...(cvUrl !== '' ? { cvUrl } : {}),
   };
@@ -74,9 +85,10 @@ function previewProfile(v: Values, upload: PendingUpload | null, cv: CvChange): 
   const raw = toRaw(v, upload, cv);
   const parsed = ProfileSchema.safeParse(raw);
   if (parsed.success) return parsed.data;
-  const { photo: _photo, cvUrl, ...rest } = raw;
+  const { photo: _photo, cvUrl, currentJob, ...rest } = raw;
   return {
     ...rest,
+    ...(currentJob ? { currentJob: { role: orPlaceholder(currentJob.role), company: orPlaceholder(currentJob.company) } } : {}),
     name: orPlaceholder(v.name),
     title: orPlaceholder(v.title),
     bio: orPlaceholder(v.bio),
@@ -118,6 +130,10 @@ export function ProfileForm({
       }
     }
     for (const f of REQUIRED) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
+    const jobFields = ['currentJobRole', 'currentJobCompany'] as const;
+    if (jobFields.some((f) => values[f].trim() !== '')) {
+      for (const f of jobFields) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
+    }
     if (!upload) {
       const typed = checkTypedImageRef(values.photo, initial.photo);
       if (typed) fieldErrors.photo = typed;
@@ -216,6 +232,8 @@ export function ProfileForm({
             </select>
           )}
         </Field>
+        {input('currentJobRole', 'Current role', 'text', 'Optional. With Availability "Not looking", the site shows "<role> @ <company>".')}
+        {input('currentJobCompany', 'Current company')}
         {input('email', 'Email', 'email')}
         {input('linkedin', 'LinkedIn URL', 'url')}
         {input('github', 'GitHub URL', 'url')}

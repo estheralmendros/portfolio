@@ -11,6 +11,12 @@ const AVAILABILITY: Record<Profile['availability'], string> = {
   freelance: 'Available for freelance',
 };
 
+/** The pill text: the current job replaces "Not looking" when set; every other case uses the availability label. */
+export const availabilityLabel = (profile: Pick<Profile, 'availability' | 'currentJob'>): string =>
+  profile.availability === 'not-looking' && profile.currentJob
+    ? `${profile.currentJob.role} @ ${profile.currentJob.company}`
+    : AVAILABILITY[profile.availability];
+
 export function HeroSection({ profile, photo, hasProjects = false }: { profile: Profile; photo?: ResolvedImage; hasProjects?: boolean }) {
   const paragraphs = profile.bio.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
@@ -18,7 +24,7 @@ export function HeroSection({ profile, photo, hasProjects = false }: { profile: 
       <div className="flex flex-col gap-6">
         <p className="status-pill">
           <span aria-hidden="true" className="status-dot" />
-          {AVAILABILITY[profile.availability]}
+          {availabilityLabel(profile)}
         </p>
         <div>
           <h1 id="about-heading" className="hero-name text-gradient">
