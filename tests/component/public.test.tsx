@@ -61,6 +61,13 @@ describe('HeroSection', () => {
     expect(screen.getByRole('link', { name: /LinkedIn/ })).toHaveAttribute('href', 'https://www.linkedin.com/in/fixture');
     expect(screen.getByRole('link', { name: /GitHub/ })).toHaveAttribute('href', 'https://github.com/fixture');
   });
+  it('shows a "See my work" link to the projects section only when there are projects', () => {
+    const { unmount } = render(<HeroSection profile={fixture.profile} hasProjects />);
+    expect(screen.getByRole('link', { name: /See my work/ })).toHaveAttribute('href', '#projects');
+    unmount();
+    render(<HeroSection profile={fixture.profile} />);
+    expect(screen.queryByRole('link', { name: /See my work/ })).toBeNull();
+  });
 });
 
 describe('ProjectCard', () => {

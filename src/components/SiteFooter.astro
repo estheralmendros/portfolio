@@ -5,6 +5,9 @@ interface Props {
 const { name } = Astro.props;
 const year = new Date().getUTCFullYear();
 ---
-<footer class="border-t border-line py-8">
-  <div class="container-page text-sm text-muted">© {year} {name}</div>
+<footer class="mt-8 border-t border-line py-10">
+  <div class="container-page flex flex-col gap-2 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+    <span>© {year} {name}</span>
+    <a href="#main" class="nav-link w-fit">Back to top ↑</a>
+  </div>
 </footer>

@@ -11,59 +11,72 @@ const AVAILABILITY: Record<Profile['availability'], string> = {
   freelance: 'Available for freelance',
 };
 
-const iconLink =
-  'inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-fg hover:text-accent';
-
-export function HeroSection({ profile, photo }: { profile: Profile; photo?: ResolvedImage }) {
+export function HeroSection({ profile, photo, hasProjects = false }: { profile: Profile; photo?: ResolvedImage; hasProjects?: boolean }) {
   const paragraphs = profile.bio.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (
-    <section id="about" aria-labelledby="about-heading" className="scroll-mt-20 py-12 sm:py-16">
-      <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
-        {photo ? (
-          <img src={photo.src} alt={profile.name} width={160} height={160} className="h-32 w-32 shrink-0 rounded-full object-cover sm:h-40 sm:w-40" />
-        ) : (
-          <div aria-hidden="true" className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full bg-accent text-4xl font-bold text-on-accent sm:h-40 sm:w-40">
-            {initials(profile.name)}
-          </div>
-        )}
-        <div className="flex flex-col gap-4">
-          <div>
-            <h1 id="about-heading" className="text-4xl font-bold tracking-tight sm:text-5xl">
-              {profile.name}
-            </h1>
-            <p className="mt-2 text-lg text-muted">
-              {profile.title} · {profile.location}
-            </p>
-          </div>
-          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-line px-3 py-1 text-sm">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-accent" />
-            {AVAILABILITY[profile.availability]}
+    <section id="about" aria-labelledby="about-heading" className="hero scroll-mt-24">
+      <div className="flex flex-col gap-6">
+        <p className="status-pill">
+          <span aria-hidden="true" className="status-dot" />
+          {AVAILABILITY[profile.availability]}
+        </p>
+        <div>
+          <h1 id="about-heading" className="hero-name text-gradient">
+            {profile.name}
+          </h1>
+          <p className="hero-role mt-4">
+            {profile.title} · {profile.location}
           </p>
-          <div className="flex max-w-prose flex-col gap-3 text-base leading-relaxed">
-            {paragraphs.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {profile.cvUrl && (
-              <a href={withBase(profile.cvUrl)} download className="btn-primary">
-                Download CV
-              </a>
-            )}
-            <a href={`mailto:${profile.socials.email}`} className={iconLink}>
+        </div>
+        <div className="flex max-w-xl flex-col gap-3 text-base leading-relaxed text-muted sm:text-lg">
+          {paragraphs.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {hasProjects && (
+            <a href="#projects" className="btn-cta">
+              See my work <span aria-hidden="true">→</span>
+            </a>
+          )}
+          {profile.cvUrl && (
+            <a href={withBase(profile.cvUrl)} download className="btn-ghost">
+              <span aria-hidden="true">↓</span> Download CV
+            </a>
+          )}
+          <span className="flex items-center gap-2 sm:ml-2">
+            <a href={`mailto:${profile.socials.email}`} className="icon-btn">
               <MailIcon />
               <span className="sr-only">Email</span>
             </a>
-            <ExternalLink href={profile.socials.linkedin} className={iconLink}>
+            <ExternalLink href={profile.socials.linkedin} className="icon-btn">
               <LinkedInIcon />
               <span className="sr-only">LinkedIn</span>
             </ExternalLink>
-            <ExternalLink href={profile.socials.github} className={iconLink}>
+            <ExternalLink href={profile.socials.github} className="icon-btn">
               <GitHubIcon />
               <span className="sr-only">GitHub</span>
             </ExternalLink>
-          </div>
+          </span>
         </div>
+      </div>
+      <div className="avatar-wrap order-first lg:order-none">
+        <span aria-hidden="true" className="avatar-ring" />
+        <div className="avatar-inner">
+          {photo ? (
+            <img src={photo.src} alt={profile.name} width={400} height={400} className="h-full w-full object-cover" />
+          ) : (
+            <span aria-hidden="true" className="avatar-initials text-gradient">
+              {initials(profile.name)}
+            </span>
+          )}
+        </div>
+        <span aria-hidden="true" className="avatar-orbit avatar-orbit-a">
+          {'{ }'}
+        </span>
+        <span aria-hidden="true" className="avatar-orbit avatar-orbit-b">
+          {'</>'}
+        </span>
       </div>
     </section>
   );

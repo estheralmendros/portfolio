@@ -1,5 +1,5 @@
 export function Tag({ label }: { label: string }) {
-  return <li className="rounded-full border border-line bg-surface px-2.5 py-0.5 text-xs font-medium text-muted">{label}</li>;
+  return <li className="tag">{label}</li>;
 }
 
 export function TagList({ tags, label = 'Tags' }: { tags: readonly string[]; label?: string }) {

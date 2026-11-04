@@ -33,7 +33,7 @@ const sections = visibleSections(content);
     <Seo title={title} description={description} path={path} ogImage={ogImage} type={type} />
     <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')}>
   </head>
-  <body class="flex min-h-screen flex-col">
+  <body class="site flex min-h-screen flex-col">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded focus:bg-bg focus:px-3 focus:py-2">Skip to content</a>
     <SiteHeader name={content.profile.name} sections={sections} />
     <main id="main" class="container-page flex-1">

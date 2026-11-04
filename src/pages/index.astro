@@ -24,7 +24,7 @@ const icons = Object.fromEntries(skills.map((s) => [s.id, getSkillIcon(s.icon)])
 const description = profile.bio.replace(/\s+/g, ' ').trim().slice(0, 155).trim();
 ---
 <BaseLayout title={`${profile.name} — ${profile.title}`} description={description} path="/">
-  <HeroSection profile={profile} photo={photo} />
+  <HeroSection profile={profile} photo={photo} hasProjects={projects.length > 0} />
   <ProjectsSection projects={projects} images={projectImages} />
   <SkillsSection skills={skills} icons={icons} />
   <CertificationsSection certifications={certifications} badges={badges} now={currentYearMonth()} />

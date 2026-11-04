@@ -2,17 +2,18 @@
 import type { SectionLink } from '../lib/sections';
 import { withBase } from '../lib/paths';
 import ThemeToggle from './ThemeToggle.astro';
+import { initials } from '../lib/initials';
 
 interface Props {
   name: string;
   sections: SectionLink[];
 }
 const { name, sections } = Astro.props;
-const linkClass = 'rounded px-2 py-1 text-sm font-medium text-fg hover:text-accent';
+const linkClass = 'nav-link';
 ---
-<header class="sticky top-0 z-10 border-b border-line bg-bg/95 backdrop-blur">
-  <div class="container-page flex h-16 items-center justify-between gap-4">
-    <a href={withBase('/')} class="font-bold tracking-tight">{name}</a>
+<header class="site-header">
+  <div class="flex h-14 items-center justify-between gap-4 pl-3 pr-2">
+    <a href={withBase('/')} class="inline-flex items-center gap-2.5 font-bold tracking-tight"><span class="brand-mark" aria-hidden="true">{initials(name)}</span>{name}</a>
     <div class="flex items-center gap-2">
       <nav aria-label="Sections" class="hidden sm:block">
         <ul class="flex items-center gap-1">
@@ -20,8 +21,8 @@ const linkClass = 'rounded px-2 py-1 text-sm font-medium text-fg hover:text-acce
         </ul>
       </nav>
       <details class="mobile-menu relative sm:hidden">
-        <summary class="cursor-pointer list-none rounded border border-line px-3 py-2 text-sm font-medium">Menu</summary>
-        <nav aria-label="Sections (mobile)" class="absolute right-0 mt-2 w-48 rounded-lg border border-line bg-bg p-2 shadow-lg">
+        <summary class="cursor-pointer list-none rounded-full border border-line px-4 py-2 text-sm font-medium">Menu</summary>
+        <nav aria-label="Sections (mobile)" class="absolute right-0 mt-3 w-52 rounded-2xl border border-line bg-raised p-2 shadow-xl">
           <ul class="flex flex-col">
             {sections.map((s) => <li><a href={withBase(`/#${s.id}`)} class={`block ${linkClass}`}>{s.label}</a></li>)}
           </ul>
