@@ -1,0 +1,11 @@
+[
+  {
+    "id": "example-cloud-certification",
+    "name": "Example Cloud Certification",
+    "issuer": "Example Issuer",
+    "issued": "2024-03",
+    "expires": "2027-03",
+    "credentialId": "ABC-123",
+    "credentialUrl": "https://example.com/verify/abc-123"
+  }
+]

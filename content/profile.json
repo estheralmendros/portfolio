@@ -1,0 +1,12 @@
+{
+  "name": "Esther Almendros",
+  "title": "Software Engineer",
+  "bio": "Placeholder bio: a short introduction about what I build and care about.\n\nSecond placeholder paragraph about current interests.",
+  "location": "City, Country",
+  "availability": "open",
+  "socials": {
+    "email": "hello@example.com",
+    "linkedin": "https://www.linkedin.com/in/placeholder",
+    "github": "https://github.com/estheralmendros"
+  }
+}

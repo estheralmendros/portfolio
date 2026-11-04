@@ -1,0 +1,25 @@
+---
+import '../styles/global.css';
+import { withBase } from '../lib/paths';
+
+// Admin CSP: only same-origin scripts/styles; network only to the GitHub API; blob: images for upload previews. Production builds only.
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; font-src 'self'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'";
+const isProd = import.meta.env.PROD;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    {isProd && <meta http-equiv="Content-Security-Policy" content={CSP}>}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <script is:inline src={withBase('/theme-init.js')}></script>
+    <title>Portfolio admin</title>
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')}>
+  </head>
+  <body class="min-h-screen">
+    <slot />
+  </body>
+</html>

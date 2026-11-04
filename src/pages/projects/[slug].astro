@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { ProjectDetail } from '../../components/ProjectDetail';
+import { hasDetailPage } from '../../components/ProjectsSection';
+import { content } from '../../content/load';
+import type { Project } from '../../content/schema';
+import { resolveImage } from '../../lib/images';
+import { toOgImage } from '../../lib/ogImage';
+import { renderMarkdown } from '../../lib/markdown';
+
+export function getStaticPaths() {
+  return content.projects.filter(hasDetailPage).map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props as { project: Project };
+// Detail width 1200; the same optimized image is the absolute og:image.
+const image = await resolveImage(project.image, { width: 1200 });
+---
+<BaseLayout
+  title={`${project.title} — ${content.profile.name}`}
+  description={project.summary}
+  path={`/projects/${project.id}/`}
+  ogImage={toOgImage(image)}
+  type="article"
+>
+  <ProjectDetail project={project} image={image} html={renderMarkdown(project.description)} />
+</BaseLayout>

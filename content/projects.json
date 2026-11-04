@@ -1,0 +1,22 @@
+[
+  {
+    "id": "portfolio",
+    "title": "Portfolio",
+    "summary": "This site: a git-based portfolio with a browser admin that commits JSON to GitHub.",
+    "description": "## Why\nPlaceholder description.\n\n## How\n- Astro static build\n- Admin commits via the GitHub API",
+    "tags": ["Astro", "React", "TypeScript"],
+    "repoUrl": "https://github.com/estheralmendros/portfolio",
+    "demoUrl": "https://estheralmendros.github.io/portfolio",
+    "featured": true,
+    "date": "2026-11"
+  },
+  {
+    "id": "example-project-two",
+    "title": "Example Project Two",
+    "summary": "Placeholder summary for a second project.",
+    "description": "",
+    "tags": ["Node.js", "Docker"],
+    "featured": false,
+    "date": "2025-06"
+  }
+]

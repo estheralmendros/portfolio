@@ -1,0 +1,23 @@
+[
+  {
+    "id": "fixture-company",
+    "type": "work",
+    "role": "Fixture Role",
+    "org": "Fixture Company",
+    "start": "2022-01",
+    "end": null,
+    "location": "Fixture City",
+    "highlights": ["Fixture highlight."],
+    "tags": ["TypeScript"]
+  },
+  {
+    "id": "fixture-school",
+    "type": "education",
+    "role": "Fixture Degree",
+    "org": "Fixture School",
+    "start": "2017-09",
+    "end": "2021-06",
+    "highlights": [],
+    "tags": []
+  }
+]

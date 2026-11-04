@@ -1,0 +1,18 @@
+[
+  {
+    "id": "fixture-current-cert",
+    "name": "Fixture Current Certification",
+    "issuer": "Fixture Issuer",
+    "issued": "2024-03",
+    "expires": "2099-03",
+    "credentialId": "FIX-123",
+    "credentialUrl": "https://example.com/verify/fix-123"
+  },
+  {
+    "id": "fixture-expired-cert",
+    "name": "Fixture Expired Certification",
+    "issuer": "Fixture Issuer",
+    "issued": "2019-01",
+    "expires": "2020-01"
+  }
+]

@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { HeroSection } from '../components/HeroSection';
+import { ProjectsSection } from '../components/ProjectsSection';
+import { SkillsSection } from '../components/SkillsSection';
+import { CertificationsSection } from '../components/CertificationsSection';
+import { TimelineSection } from '../components/TimelineSection';
+import { ContactSection } from '../components/ContactSection';
+import { content } from '../content/load';
+import { resolveImage } from '../lib/images';
+import { getSkillIcon } from '../lib/icons';
+import { currentYearMonth } from '../lib/dates';
+
+// Image widths: hero photo 400, project card 800, certification badge 160.
+const { profile, projects, skills, certifications, experience } = content;
+const [photo, projectImageList, badgeList] = await Promise.all([
+  resolveImage(profile.photo, { width: 400 }),
+  Promise.all(projects.map((p) => resolveImage(p.image, { width: 800 }))),
+  Promise.all(certifications.map((c) => resolveImage(c.badge, { width: 160 }))),
+]);
+const projectImages = Object.fromEntries(projects.map((p, i) => [p.id, projectImageList[i]]));
+const badges = Object.fromEntries(certifications.map((c, i) => [c.id, badgeList[i]]));
+const icons = Object.fromEntries(skills.map((s) => [s.id, getSkillIcon(s.icon)]));
+const description = profile.bio.replace(/\s+/g, ' ').trim().slice(0, 155).trim();
+---
+<BaseLayout title={`${profile.name} — ${profile.title}`} description={description} path="/">
+  <HeroSection profile={profile} photo={photo} />
+  <ProjectsSection projects={projects} images={projectImages} />
+  <SkillsSection skills={skills} icons={icons} />
+  <CertificationsSection certifications={certifications} badges={badges} now={currentYearMonth()} />
+  <TimelineSection experience={experience} />
+  <ContactSection socials={profile.socials} />
+</BaseLayout>
+<script>
+  import '../scripts/projectFilter.ts';
+</script>

@@ -1,0 +1,203 @@
+@import 'tailwindcss';
+
+/* Theme is driven by <html data-theme="light|dark">, set before first paint by public/theme-init.js. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Light palette: zinc + teal accent. All text pairs ≥ 4.5:1, UI borders ≥ 3:1. */
+  --color-bg: #ffffff;
+  --color-surface: #f4f4f5;
+  --color-fg: #18181b;
+  --color-muted: #52525b;
+  --color-line: #d4d4d8;
+  --color-line-strong: #71717a;
+  --color-accent: #0f766e;
+  --color-on-accent: #ffffff;
+  --color-danger: #b91c1c;
+  --color-success: #15803d;
+}
+
+[data-theme='dark'] {
+  --color-bg: #18181b;
+  --color-surface: #27272a;
+  --color-fg: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-line: #3f3f46;
+  --color-line-strong: #a1a1aa;
+  --color-accent: #2dd4bf;
+  --color-on-accent: #042f2e;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    color-scheme: light;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 72rem;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+  .section-title {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+  .card {
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background: var(--color-bg);
+  }
+  .link {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    text-decoration-thickness: 2px;
+  }
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .btn-secondary {
+    border-color: var(--color-line-strong);
+    color: var(--color-fg);
+    background: transparent;
+  }
+  .btn-danger {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+    background: transparent;
+  }
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .field-input {
+    width: 100%;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0.375rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    padding: 0.5rem 0.75rem;
+  }
+  .field-input[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
+  .field-input:read-only {
+    background: var(--color-surface);
+  }
+  .prose {
+    line-height: 1.75;
+  }
+  .prose > * + * {
+    margin-top: 1rem;
+  }
+  .prose h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 2rem;
+  }
+  .prose h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+  }
+  .prose ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+  }
+  .prose ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+  }
+  .prose a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .prose code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--color-surface);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+  }
+  .prose pre {
+    overflow-x: auto;
+    background: var(--color-surface);
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+  .prose pre code {
+    background: transparent;
+    padding: 0;
+  }
+  .prose blockquote {
+    border-left: 4px solid var(--color-line);
+    padding-left: 1rem;
+    color: var(--color-muted);
+  }
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
+}

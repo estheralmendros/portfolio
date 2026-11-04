@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="120" height="120" viewBox="0 0 120 120" onload="top.__pwned = 'onload'">
+  <script>top.__pwned = 'script';</script>
+  <script href="https://evil.example/payload.js"></script>
+  <rect width="120" height="120" fill="#c00" onload="top.__pwned = 'rect-onload'"/>
+  <image href="https://evil.example/tracker.png" xlink:href="https://evil.example/tracker.png" width="10" height="10" onerror="top.__pwned = 'onerror'"/>
+  <a href="javascript:top.__pwned = 'link'"><text x="10" y="60">x</text></a>
+</svg>

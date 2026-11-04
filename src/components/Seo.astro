@@ -1,0 +1,34 @@
+---
+import { SITE } from '../config/site';
+import type { OgImage } from '../lib/ogImage';
+import { withBase } from '../lib/paths';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Path under the base, e.g. '/' or '/projects/x/'. */
+  path: string;
+  /** Absolute og:image (built by the page, e.g. with toOgImage); omitted -> SITE.defaultOgImage. Never derived here. */
+  ogImage?: OgImage | undefined;
+  type?: 'website' | 'article';
+}
+
+const { title, description, path, ogImage, type = 'website' } = Astro.props;
+const canonical = new URL(withBase(path), SITE.origin).href;
+const og: OgImage = ogImage ?? { url: new URL(withBase(SITE.defaultOgImage), SITE.origin).href };
+const hasSize = og.width != null && og.height != null;
+---
+<title>{title}</title>
+<meta name="description" content={description}>
+<link rel="canonical" href={canonical}>
+<meta property="og:title" content={title}>
+<meta property="og:description" content={description}>
+<meta property="og:url" content={canonical}>
+<meta property="og:image" content={og.url}>
+{hasSize && <meta property="og:image:width" content={String(og.width)}>}
+{hasSize && <meta property="og:image:height" content={String(og.height)}>}
+<meta property="og:type" content={type}>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content={title}>
+<meta name="twitter:description" content={description}>
+<meta name="twitter:image" content={og.url}>

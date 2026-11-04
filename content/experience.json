@@ -1,0 +1,23 @@
+[
+  {
+    "id": "example-company-a",
+    "type": "work",
+    "role": "Software Engineer",
+    "org": "Example Company A",
+    "start": "2022-01",
+    "end": null,
+    "location": "City, Country",
+    "highlights": ["Placeholder highlight about impact."],
+    "tags": ["TypeScript", "React"]
+  },
+  {
+    "id": "example-university",
+    "type": "education",
+    "role": "BSc Computer Science",
+    "org": "Example University",
+    "start": "2017-09",
+    "end": "2021-06",
+    "highlights": [],
+    "tags": []
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "fixture-alpha",
+    "title": "Fixture Alpha",
+    "summary": "Featured fixture project with a Markdown description.",
+    "description": "## Links\n\nSee [a](/abs), [b](#frag) and [c](./rel).\n\n![i](/og-image.png)\n\n<script>alert('x')</script>\n\n[bad](javascript:alert(1))",
+    "tags": ["Astro", "Testing"],
+    "image": "/og-image.png",
+    "imageAlt": "Fixture alpha screenshot",
+    "repoUrl": "https://github.com/fixture/alpha",
+    "demoUrl": "https://example.com/alpha",
+    "featured": true,
+    "date": "2026-10"
+  },
+  {
+    "id": "admin-dashboard",
+    "title": "Fixture Admin Dashboard",
+    "summary": "Featured fixture project whose slug starts with admin.",
+    "description": "Dashboard details.",
+    "tags": ["React", "C|D"],
+    "image": "src/assets/uploads/projects/fixture-000000.jpg",
+    "imageAlt": "Fixture admin dashboard screenshot",
+    "featured": true,
+    "date": "2025-02"
+  },
+  {
+    "id": "fixture-gamma",
+    "title": "Fixture Gamma",
+    "summary": "Non-featured fixture project without a detail page.",
+    "description": "",
+    "tags": [],
+    "featured": false,
+    "date": "2024-03"
+  }
+]

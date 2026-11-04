@@ -1,0 +1,36 @@
+---
+import type { SectionLink } from '../lib/sections';
+import { withBase } from '../lib/paths';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  name: string;
+  sections: SectionLink[];
+}
+const { name, sections } = Astro.props;
+const linkClass = 'rounded px-2 py-1 text-sm font-medium text-fg hover:text-accent';
+---
+<header class="sticky top-0 z-10 border-b border-line bg-bg/95 backdrop-blur">
+  <div class="container-page flex h-16 items-center justify-between gap-4">
+    <a href={withBase('/')} class="font-bold tracking-tight">{name}</a>
+    <div class="flex items-center gap-2">
+      <nav aria-label="Sections" class="hidden sm:block">
+        <ul class="flex items-center gap-1">
+          {sections.map((s) => <li><a href={withBase(`/#${s.id}`)} class={linkClass}>{s.label}</a></li>)}
+        </ul>
+      </nav>
+      <details class="mobile-menu relative sm:hidden">
+        <summary class="cursor-pointer list-none rounded border border-line px-3 py-2 text-sm font-medium">Menu</summary>
+        <nav aria-label="Sections (mobile)" class="absolute right-0 mt-2 w-48 rounded-lg border border-line bg-bg p-2 shadow-lg">
+          <ul class="flex flex-col">
+            {sections.map((s) => <li><a href={withBase(`/#${s.id}`)} class={`block ${linkClass}`}>{s.label}</a></li>)}
+          </ul>
+        </nav>
+      </details>
+      <ThemeToggle />
+    </div>
+  </div>
+</header>
+<style>
+  .mobile-menu summary::-webkit-details-marker { display: none; }
+</style>

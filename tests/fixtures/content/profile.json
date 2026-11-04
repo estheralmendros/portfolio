@@ -1,0 +1,13 @@
+{
+  "name": "Fixture Person",
+  "title": "Fixture Engineer",
+  "bio": "Fixture bio paragraph one for end-to-end tests.\n\nFixture bio paragraph two.",
+  "location": "Fixture City",
+  "availability": "freelance",
+  "socials": {
+    "email": "fixture@example.com",
+    "linkedin": "https://www.linkedin.com/in/fixture",
+    "github": "https://github.com/fixture"
+  },
+  "cvUrl": "/docs/fixture-cv.pdf"
+}

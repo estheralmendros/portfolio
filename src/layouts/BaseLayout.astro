@@ -1,0 +1,44 @@
+---
+import '../styles/global.css';
+import Seo from '../components/Seo.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { content } from '../content/load';
+import { visibleSections } from '../lib/sections';
+import { withBase } from '../lib/paths';
+import type { OgImage } from '../lib/ogImage';
+
+interface Props {
+  title: string;
+  description: string;
+  path: string;
+  ogImage?: OgImage | undefined;
+  type?: 'website' | 'article';
+}
+
+// Public-page CSP (shared-origin mitigation). Production builds only: Vite dev needs inline styles + HMR websocket.
+const CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'";
+const isProd = import.meta.env.PROD;
+const { title, description, path, ogImage, type } = Astro.props;
+const sections = visibleSections(content);
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    {isProd && <meta http-equiv="Content-Security-Policy" content={CSP}>}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script is:inline src={withBase('/theme-init.js')}></script>
+    <Seo title={title} description={description} path={path} ogImage={ogImage} type={type} />
+    <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')}>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-20 focus:rounded focus:bg-bg focus:px-3 focus:py-2">Skip to content</a>
+    <SiteHeader name={content.profile.name} sections={sections} />
+    <main id="main" class="container-page flex-1">
+      <slot />
+    </main>
+    <SiteFooter name={content.profile.name} />
+  </body>
+</html>

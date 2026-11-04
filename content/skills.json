@@ -1,0 +1,9 @@
+[
+  { "id": "typescript", "name": "TypeScript", "category": "languages", "years": 5, "icon": "typescript" },
+  { "id": "javascript", "name": "JavaScript", "category": "languages", "years": 6, "icon": "javascript" },
+  { "id": "react", "name": "React", "category": "frameworks", "years": 4, "icon": "react" },
+  { "id": "astro", "name": "Astro", "category": "frameworks", "icon": "astro" },
+  { "id": "github-actions", "name": "GitHub Actions", "category": "cloud", "icon": "githubactions" },
+  { "id": "docker", "name": "Docker", "category": "tools", "icon": "docker" },
+  { "id": "git", "name": "Git", "category": "tools", "icon": "git" }
+]

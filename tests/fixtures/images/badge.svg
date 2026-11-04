@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
+  <rect x="2" y="2" width="196" height="96" rx="12" fill="#1f6feb" stroke="#0b3d91" stroke-width="4"/>
+  <text x="100" y="60" font-family="sans-serif" font-size="28" fill="#ffffff" text-anchor="middle">CERT</text>
+</svg>

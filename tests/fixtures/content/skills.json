@@ -1,0 +1,6 @@
+[
+  { "id": "typescript", "name": "TypeScript", "category": "languages", "years": 5, "icon": "typescript" },
+  { "id": "fixturelang", "name": "Fixturelang", "category": "languages", "icon": "notarealiconslug" },
+  { "id": "react", "name": "React", "category": "frameworks", "years": 4, "icon": "react" },
+  { "id": "docker", "name": "Docker", "category": "tools" }
+]
