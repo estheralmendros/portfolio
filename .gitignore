@@ -1,0 +1,13 @@
+.claude/
+specs/
+node_modules/
+dist/
+dist-test/
+.astro/
+test-results/
+playwright-report/
+blob-report/
+coverage/
+*.log
+.DS_Store
+.env
