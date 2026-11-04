@@ -1,22 +1,92 @@
 [
   {
-    "id": "portfolio",
-    "title": "Portfolio",
-    "summary": "This site: a git-based portfolio with a browser admin that commits JSON to GitHub.",
-    "description": "## Why\nPlaceholder description.\n\n## How\n- Astro static build\n- Admin commits via the GitHub API",
-    "tags": ["Astro", "React", "TypeScript"],
-    "repoUrl": "https://github.com/estheralmendros/portfolio",
-    "demoUrl": "https://estheralmendros.github.io/portfolio",
+    "id": "hometv",
+    "title": "HomeTV",
+    "summary": "A self-hosted media server for one household: your films and shows on every screen at home, with per-profile progress, ratings and an Android TV app.",
+    "description": "## What it is\nHomeTV indexes the films and TV shows on a local disk, fetches metadata and artwork from TMDB, keeps a watch history per profile, and plays video in the browser and on Android TV / Google TV. Files play directly when the device supports them; otherwise they are converted on the fly. It is only reachable over a private Tailscale network, with HTTPS, and the whole interface is in Spanish.\n\n## Highlights\n- **Your library, automatically.** Drop files in your folders: HomeTV identifies them with TMDB (titles, posters, synopses, cast, in Spanish) and picks up new or changed files about a minute after a copy ends.\n- **One profile per person.** Each profile has its own progress, \"Seguir viendo\", watched marks and \"Mi lista\" (a watchlist with filters and sorting). Admin actions are behind a PIN.\n- **Ratings and household activity.** Rate films and shows from ½ to 5 stars; every page shows the household average, and an \"Actividad\" feed shows what everyone rated.\n- **Cast pages.** Tap an actor to see their biography and everything else they appear in that you have at home.\n- **Plays almost anything.** Direct play when the device can handle the file; otherwise a live HLS remux: the video is copied untouched (no transcoding) and the audio is converted only when needed. Embedded and external subtitles, multiple audio tracks and versions.\n- **Every screen.** A responsive web app for computers, tablets and phones, and a native Android TV / Google TV app driven entirely by the remote.\n- **Private by design.** Runs in Docker next to a Tailscale sidecar: no open ports, nothing on the public internet.\n\n## How it works\n- **Scanner:** walks the library folders, parses file names (guessit), probes them with ffprobe and links them to films, shows and episodes. On Linux, inotify triggers a scan of just the changed folder.\n- **Metadata:** matches titles on TMDB (Spanish first, with fallbacks) and caches posters, backdrops, cast and biographies locally.\n- **Playback:** each client reports what it can decode. The server either streams the original file (byte ranges) or starts an HLS session in which ffmpeg remuxes the video into fMP4 segments cut at keyframes.\n- **Clients:** the web app and the Android TV app share the same REST API (OpenAPI documented).\n\n## Stack\n- **Server:** Python 3.12, FastAPI, SQLAlchemy + SQLite, Alembic, ffmpeg.\n- **Web:** React 18, TypeScript, Vite, TanStack Query, hls.js.\n- **TV:** Kotlin, Jetpack Compose for TV, Media3 ExoPlayer.\n- **Deployment:** Docker Compose with a Tailscale sidecar (HTTPS, no open ports).\n- **Quality:** strict TDD; server unit, service, API and ffmpeg integration tests, a Vitest suite for the web app, Playwright smoke tests and Robolectric focus tests for the TV app.\n\n## Screenshots\n![Film page for Dune: poster, metadata, your rating, the household average and other profiles' stars, synopsis, actions and cast](/images/projects/hometv/web-film.jpg)\n\n*Film page: your rating, the household's, and the cast.*\n\n![Show page for The Office: resume button for the next episode, seasons and episode list with watched marks](/images/projects/hometv/web-show.jpg)\n\n*Show page: resume where you left off, season by season.*\n\n![Actor page for Timothée Chalamet: photo, birth date, biography and his films in the catalog](/images/projects/hometv/web-person.jpg)\n\n*Cast pages: the biography and what else they are in, at home.*\n\n![Actividad: a feed of who rated what, with avatars, stars, times and posters](/images/projects/hometv/web-activity.jpg)\n\n*\"Actividad\": what everyone in the house has been rating.*\n\n![Mi lista: the profile's watchlist with type, status and sort filters](/images/projects/hometv/web-watchlist.jpg)\n\n*\"Mi lista\": a watchlist per profile, filtered by type and watched status.*\n\nOn a phone, the same web app switches to a bottom tab bar:\n\n![The web app on a phone: home screen, film page and Actividad, each with the bottom tab bar](/images/projects/hometv/web-phones.png)\n\n---\n\n*HomeTV uses the TMDB API but is not endorsed or certified by TMDB. Posters, artwork and metadata in the screenshots come from TMDB and belong to their respective owners.*",
+    "tags": [
+      "Python",
+      "FastAPI",
+      "SQLite",
+      "React",
+      "TypeScript",
+      "Kotlin",
+      "Jetpack Compose",
+      "FFmpeg",
+      "Docker",
+      "Tailscale"
+    ],
+    "image": "src/assets/uploads/projects/hometv-e21c73.jpg",
+    "imageAlt": "HomeTV home screen: \"Seguir viendo\" with film and episode previews and progress bars, and \"Añadidos recientemente\" with posters",
+    "repoUrl": "https://github.com/estheralmendros/HomeTV",
     "featured": true,
     "date": "2026-11"
   },
   {
-    "id": "example-project-two",
-    "title": "Example Project Two",
-    "summary": "Placeholder summary for a second project.",
-    "description": "",
-    "tags": ["Node.js", "Docker"],
+    "id": "personal-finances-pwa",
+    "title": "Personal finances PWA",
+    "summary": "A self-hosted personal finance app for one person: your bank exports, categorised, summed up and explained, on a Raspberry Pi at home.",
+    "description": "## What it is\nFinanzas personales imports the CSV exports from **Imagin**, **Betterfly** and **Revolut**, categorises every movement with rules it learns from your edits, detects transfers between your own accounts and turns it all into monthly, yearly, per-account and per-trip dashboards. It is a PWA: the same app works in a desktop browser and installs on Android. It runs on a Raspberry Pi, is only reachable over a private Tailscale network with HTTPS, never connects to a bank, and the whole interface is in Spanish.\n\n## Highlights\n- **Import, don't type.** Upload the CSV export of each bank, preview it, confirm. Duplicates are skipped, and any import can be undone from its history.\n- **Categories that learn.** Rules suggest a category from what you've categorised before; your manual choices are never overwritten. Built-in rules handle Revolut interest and Betterfly.\n- **Transfers detected.** Money moved between your own accounts is paired and kept out of income and spending, so the figures reflect what you really earned and spent.\n- **Three savings rates.** Every month shows the plain rate, the rate without extraordinary spending, and the \"real\" rate: what you actually moved to savings. Budgets per category, with progress bars.\n- **Year and account dashboards.** A 12-month table with charts and a category × month budget table; account trackers with Revolut's real and estimated interest, a balance cross-check and a savings goal.\n- **Trips (\"Viajes\").** Label movements with a trip and see what it cost: before / during / after, refunds, net cost, cost per day and budget. Movements are added from a checklist around the trip dates or by search.\n- **Export and back up.** Movements and monthly stats to CSV and Excel; a consistent copy of the whole database in one click.\n- **Private by design.** One SQLite file on a Pi, `tailscale serve` for HTTPS, a firewall restricted to the tailnet, a sandboxed service and a strict Content-Security-Policy.\n\n## How it works\n- **Importers:** one parser per bank turns its CSV export into movements; a preview shows new rows, duplicates and warnings before you confirm. Each import is a batch you can undo.\n- **Domain logic:** pure functions, with no database and no clock: the categoriser, transfer pairing, the monthly / yearly / account / trip statistics and the CSV / XLSX exports. Money is integer cents everywhere.\n- **API:** thin FastAPI routers over services that load the data and call the pure functions. Every write is one SQLite transaction (WAL mode), served by a small connection pool.\n- **Web app:** Svelte 5 + Vite, a hash router and Chart.js loaded lazily for the charts. The service worker caches only the app shell; the data is always online.\n\n## Stack and operations\n- **Backend:** Python 3.11+, FastAPI, SQLite (WAL) with numbered SQL migrations, argon2id password hashing, openpyxl.\n- **Frontend:** Svelte 5, Vite, Chart.js; installable PWA (WebAPK on Android).\n- **Deployment:** systemd on Raspberry Pi OS behind `tailscale serve`. `make deploy` runs the tests and linters, builds and pushes over Tailscale SSH (a PowerShell script does the same from Windows); every deploy keeps a database snapshot.\n- **Hardening:** firewall restricted to Tailscale, a sandboxed systemd service, automatic security updates and an exposure check; tuned for a 1 GB Raspberry Pi 3B.\n- **Quality:** strict TDD, with pytest on the backend, Vitest on the frontend, checks for the deploy scripts and a Pi-compatibility run on Python 3.11 and SQLite 3.40. Spec-driven (phased PRDs) and versioned with a changelog.\n\n## Screenshots\n![Año 2025: yearly totals, an income vs. spending bar chart per month and the 12-month table with savings rates](/images/projects/personal-finances-pwa/web-year.jpg)\n\n*Año: the year month by month, with charts and savings rates.*\n\n![Cuentas 2025: the Revolut monthly tracker, and Betterfly and Imagin month-by-month balances](/images/projects/personal-finances-pwa/web-accounts.jpg)\n\n*Cuentas: a tracker per account, with interest and balances.*\n\n![Viajes: trips grouped by year with net cost, cost per day and budget progress](/images/projects/personal-finances-pwa/web-trips.jpg)\n\n*Viajes: every trip, its net cost and its budget.*\n\n![Japón 2026 trip dashboard: spending before, during and after, refunds, net cost, budget, spending by account, by category and by day](/images/projects/personal-finances-pwa/web-trip.jpg)\n\n*A trip dashboard: what it really cost, and where the money went.*\n\n![Movimientos: the month's movements with search, account, category and trip filters, and trip chips](/images/projects/personal-finances-pwa/web-movements.jpg)\n\n*Movimientos: search and filter by account, category, trip, uncategorised or transfers.*\n\nOn a phone, the same app switches to a bottom tab bar:\n\n![The app on a phone: Resumen, Movimientos and a trip dashboard, each with the bottom tab bar](/images/projects/personal-finances-pwa/phones.png)\n\n---\n\n*The screenshots show the dark theme with generated demo data, not real finances.*",
+    "tags": [
+      "Python",
+      "FastAPI",
+      "SQLite",
+      "Svelte",
+      "JavaScript",
+      "Chart.js",
+      "PWA",
+      "Raspberry Pi",
+      "Tailscale"
+    ],
+    "image": "src/assets/uploads/projects/personal-finances-pwa-bfa726.jpg",
+    "imageAlt": "Resumen for September 2026: income, spending and savings, three savings rates, account balances, spending by category and budget bars",
+    "featured": true,
+    "date": "2026-10"
+  },
+  {
+    "id": "greenhouse-digital-twin",
+    "title": "Greenhouse Digital Twin",
+    "summary": "Final Degree Project: a digital twin of an automated Arduino greenhouse that predicts the optimal watering time to save water.",
+    "description": "## Overview\nMy Final Degree Project (Trabajo de Fin de Grado) for the Bachelor's Degree in Computer Engineering at the University of Málaga (ETSI Informática, 2024/2025), supervised by Javier Troya Castilla and Paula Muñoz Ariza.\n\nThe project builds a digital twin of an automated greenhouse to optimise water use in agriculture through smart irrigation decisions. It combines a microcontroller board, a Raspberry Pi, IoT technologies, data analysis and a machine learning predictive model.\n\nTemperature, air humidity and soil moisture are collected in real time, stored in a time-series database and shown on dashboards. A predictive model estimates the optimal watering duration from those conditions.\n\n## Main features\n- **Physical twin:** a scale-model greenhouse with sensors and actuators.\n- **Time-series database:** InfluxDB stores every measurement.\n- **Real-time visualisation:** a Grafana dashboard connected to the database.\n- **IoT communication:** MQTT (Wemos D1 R1 over Wi-Fi) or USB serial (Arduino UNO).\n- **Irrigation prediction:** a linear regression model trained on real data.\n- **Modular system:** Docker containers and Python scripts.\n\n## Hardware\n- **Microcontroller:** Arduino UNO (recommended) or Wemos D1 R1.\n- **Sensors:** DHT22 (temperature and air humidity) and a resistive soil moisture sensor.\n- **Actuators:** a water pump, a fan and an I2C LCD display.\n- **Gateway:** a Raspberry Pi running the services in Docker (set up with IOTstack).\n\n## How it works\n1. The board reads the sensors and drives the actuators (Arduino sketches in C++).\n2. The readings reach InfluxDB either through MQTT and Node-RED (Wemos, Wi-Fi) or through a Python script that reads the USB serial port (Arduino UNO).\n3. Grafana shows temperature, air humidity, soil moisture and watering seconds in real time.\n4. The digital twin script trains the regression model (saved as `model.pkl`), predicts the optimal watering seconds for the current conditions and writes the prediction back to InfluxDB.\n\n## Stack\n- **Embedded:** Arduino (C++).\n- **Data and IoT:** InfluxDB, Grafana, Mosquitto (MQTT) and Node-RED, on Docker / Docker Compose via IOTstack.\n- **Analysis and prediction:** Python 3.8+ with a linear regression model.",
+    "tags": [
+      "Arduino",
+      "C++",
+      "Python",
+      "Raspberry Pi",
+      "IoT",
+      "MQTT",
+      "InfluxDB",
+      "Grafana",
+      "Node-RED",
+      "Docker",
+      "Machine Learning"
+    ],
+    "image": "src/assets/uploads/projects/greenhouse-digital-twin-753fb2.jpg",
+    "imageAlt": "Greenhouse circuit: Arduino UNO with DHT22 and soil moisture sensors, a fan, a relay-driven water pump and an I2C LCD",
+    "repoUrl": "https://github.com/estheralmendros/TFG-Esther",
+    "docUrl": "https://riuma.uma.es/entities/publication/2bf33082-5a69-4d1d-8b19-8baadf7455c2",
+    "featured": true,
+    "date": "2025-07"
+  },
+  {
+    "id": "portfolio",
+    "title": "Portfolio",
+    "summary": "This site: a static Astro portfolio generated from JSON, with a private browser admin that edits every section and commits to GitHub.",
+    "description": "## What it is\nThis portfolio is a static site generated by Astro from a handful of JSON files (profile, projects, skills, certifications and experience) and published on GitHub Pages. It has no server and no database: the content lives in the repository.\n\nTo keep it up to date without touching code, it ships a private, bookmark-only **admin panel** that runs entirely in the browser. I log in with a GitHub fine-grained token and edit every section with a live preview; each save is one commit to `main`, and GitHub Actions validates, builds and redeploys the site.\n\n## Public site\n- **One page, six sections:** About, Projects, Stack, Certifications, Journey and Contact; empty sections and their nav links are left out.\n- **Projects:** featured and regular groups, a technology filter, and a detail page per project with a Markdown description.\n- **Light and dark themes** that follow the system and remember your choice, with no flash on load.\n- **Responsive and accessible:** mobile menu, visible focus, a skip link, the current section marked in the header, and automated axe checks in both themes.\n- **SEO:** per-page meta and Open Graph tags (with optimized share images), a sitemap and robots.txt.\n- **Optimized images:** uploads are converted to responsive WebP at build time.\n\n## Admin panel\n- **Edit everything:** profile, projects, skills, certifications and experience, each with a form validated by the same schemas as the build.\n- **Live preview** of each entry with the real site components, side by side or in a tab on small screens.\n- **Uploads:** images are resized in the browser (SVG badges are rasterized), and the CV is uploaded as a PDF. A save with files is a single commit through the Git Data API.\n- **Reorder** any list with the keyboard and save the new order in one commit.\n- **Safe concurrent edits:** every write checks the file version, so a change made elsewhere is never overwritten.\n- **Deploy status:** a badge follows the GitHub Actions run of each save (Deploying, Live, Failed or Replaced).\n- **Clear errors** for invalid or expired tokens, missing permissions, rate limits and offline use.\n\n## Security\n- A strict Content-Security-Policy on every page: no inline scripts or styles and no third-party scripts, fonts or stylesheets.\n- The token is scoped to this one repository, kept only in the browser tab (`sessionStorage`) and never sent anywhere but the GitHub API.\n- Markdown is rendered with raw HTML escaped and every URL filtered by protocol.\n- The deploy workflow has read-only permissions except for the Pages deployment job.\n\n## Stack\n- **Site:** Astro, React (server-rendered only, no client hydration), TypeScript and Tailwind CSS.\n- **Content:** JSON validated with Zod at build time and in the admin; Markdown with marked; Simple Icons for the stack.\n- **Admin:** a React single-page app using Octokit and the GitHub Contents and Git Data APIs.\n- **CI/CD:** GitHub Actions (lint, typecheck, tests, build) deploying to GitHub Pages.\n\n## How it was built\nSpec-driven and test-first: two PRDs (the MVP and a v2 with uploads, reorder, preview and the deploy badge), implemented with TDD and checked by automated validation runs and code reviews. Around 900 Vitest unit and component tests, structural smoke tests on the built output and about 140 Playwright end-to-end tests, all against fixture content and a simulated GitHub, so no test ever touches the real repository.",
+    "tags": [
+      "Astro",
+      "React",
+      "TypeScript",
+      "Tailwind CSS",
+      "Zod",
+      "GitHub API",
+      "GitHub Actions",
+      "Vitest",
+      "Playwright"
+    ],
+    "repoUrl": "https://github.com/estheralmendros/portfolio",
+    "demoUrl": "https://estheralmendros.github.io/portfolio",
     "featured": false,
-    "date": "2025-06"
+    "date": "2026-11"
   }
 ]

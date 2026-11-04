@@ -1,23 +1,35 @@
 [
   {
-    "id": "example-company-a",
+    "id": "tupl",
     "type": "work",
-    "role": "Software Engineer",
-    "org": "Example Company A",
-    "start": "2022-01",
+    "role": "Data Engineer",
+    "org": "Tupl Inc.",
+    "start": "2025-09",
     "end": null,
-    "location": "City, Country",
-    "highlights": ["Placeholder highlight about impact."],
-    "tags": ["TypeScript", "React"]
+    "location": "Málaga, Spain",
+    "highlights": ["Built an automated alert and notification system on IoT sensor data, with periodic data collection from online APIs.", "Maintained and refactored a centralized system for operations, personnel and machinery management.", "Automated data collection, metrics, dynamic dashboards and report distribution for a Spanish association.", "Owned software delivery end to end: requirements, integrations, deployment, testing and client support.", "Wrote technical proposals (architecture, scope and requirements) and coordinated work across projects."],
+    "tags": []
   },
   {
-    "id": "example-university",
+    "id": "tupl-internship",
+    "type": "work",
+    "role": "R&D Intern",
+    "org": "Tupl Inc.",
+    "start": "2025-03",
+    "end": "2025-09",
+    "location": "Málaga, Spain",
+    "highlights": ["Computer vision project presented at an industrial innovation event: object detection and classification triggering automated actions.", "Smart sensor system for commercial establishments: real-time critical event alerts, SQL data ingestion and weekly statistics reports.", "Deployed a Kubernetes cluster end to end on an NVIDIA Jetson (Aetina) device.", "Built an automated database backup system with Kubernetes CronJobs, sent periodically to a NAS."],
+    "tags": []
+  },
+  {
+    "id": "uma",
     "type": "education",
-    "role": "BSc Computer Science",
-    "org": "Example University",
-    "start": "2017-09",
-    "end": "2021-06",
-    "highlights": [],
+    "role": "Computer Engineering Degree",
+    "org": "University of Málaga",
+    "start": "2020-09",
+    "end": "2025-07",
+    "location": "Málaga, Spain",
+    "highlights": ["Coursework: Data structures, algorithms, databases and computer systems.", "Research: AI, digital twins and electronics."],
     "tags": []
   }
 ]

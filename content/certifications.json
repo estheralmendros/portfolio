@@ -1,11 +1,32 @@
 [
   {
-    "id": "example-cloud-certification",
-    "name": "Example Cloud Certification",
-    "issuer": "Example Issuer",
-    "issued": "2024-03",
-    "expires": "2027-03",
-    "credentialId": "ABC-123",
-    "credentialUrl": "https://example.com/verify/abc-123"
+    "id": "analysis-python-fguma",
+    "name": "Data analysis with Python",
+    "issuer": "FGUMA",
+    "issued": "2025-06",
+    "credentialId": "6833-4776-6D71P335A-7744",
+    "credentialUrl": "https://prod-gonce-verifirma.uma.es/verifirma/code/6833-4776-6D71P335A-7744"
+  },
+  {
+    "id": "python-beginners-fguma",
+    "name": "Python for beginners",
+    "issuer": "FGUMA",
+    "issued": "2025-06",
+    "credentialId": "3547-6679-3839P7447-724B",
+    "credentialUrl": "https://prod-gonce-verifirma.uma.es/verifirma/code/3547-6679-3839P7447-724B"
+  },
+  {
+    "id": "nvidia-cuda",
+    "name": "Fundamentals of Accelerated Computing with CUDA C/C++",
+    "issuer": "NVIDIA",
+    "issued": "2024-12",
+    "credentialId": "82qaSm71SxKYd9Sl7hERyA"
+  },
+  {
+    "id": "cambridge-c1",
+    "name": "Cambridge C1 Advanced",
+    "issuer": "Cambridge English",
+    "issued": "2019-07",
+    "credentialId": "197ES0655025"
   }
 ]
