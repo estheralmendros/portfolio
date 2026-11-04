@@ -50,6 +50,21 @@ describe('ProjectForm (create)', () => {
     });
   });
 
+  it('Documentation URL is optional, saved as docUrl and must be https://', async () => {
+    const { onSave } = setup();
+    await fillValid();
+    const doc = screen.getByLabelText(/^Documentation URL/);
+    expect(doc).not.toHaveAttribute('aria-required');
+    await userEvent.type(doc, 'http://docs.example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(doc).toHaveAttribute('aria-invalid', 'true');
+    await userEvent.clear(doc);
+    await userEvent.type(doc, 'https://docs.example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ docUrl: 'https://docs.example.com' }));
+  });
+
   it('shows field errors, sets aria attributes, focuses the first invalid field and does not save', async () => {
     const { onSave } = setup();
     await userEvent.type(screen.getByLabelText(/^Title/), 'X');

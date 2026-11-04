@@ -24,11 +24,11 @@ describe('SkillForm', () => {
     expect(screen.getByLabelText(/^Id/)).toBeInTheDocument();
     const category = screen.getByLabelText(/^Category/);
     expect(Array.from((category as HTMLSelectElement).options).filter((o) => o.value).map((o) => o.textContent)).toEqual([
-      'Languages', 'Frameworks', 'Cloud', 'Tools',
+      'Languages', 'Data, IoT & AI', 'DevOps & Cloud', 'Dev tools',
     ]);
     expect(screen.getByLabelText(/^Years/)).toHaveAttribute('inputmode', 'numeric'); // text + numeric keyboard: bad input is reported (review S4)
     expect(screen.getByLabelText(/^Icon/)).toBeInTheDocument();
-    expect(screen.getByText('e.g. typescript — see simpleicons.org')).toBeInTheDocument();
+    expect(screen.getByText('e.g. typescript (simpleicons.org) or mdi:database (pictogrammers.com)')).toBeInTheDocument();
   });
 
   it('id auto-derives from the name until edited and is editable on create', async () => {
@@ -168,8 +168,8 @@ describe('SkillForm (preview, prd2 Feature 5)', () => {
 
   it('invalid (no name): placeholder chip and "Fix errors to save"', async () => {
     setup();
-    await userEvent.selectOptions(screen.getByLabelText(/^Category/), 'cloud');
-    await waitFor(() => expect(within(previewPane()).getByRole('heading', { name: 'Cloud' })).toBeInTheDocument());
+    await userEvent.selectOptions(screen.getByLabelText(/^Category/), 'devops');
+    await waitFor(() => expect(within(previewPane()).getByRole('heading', { name: 'DevOps & Cloud' })).toBeInTheDocument());
     expect(within(previewPane()).getByText('—', { selector: 'span.font-medium' })).toBeInTheDocument();
     expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
   });

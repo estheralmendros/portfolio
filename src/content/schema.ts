@@ -29,7 +29,7 @@ const TagsSchema = z
   .max(12)
   .refine((t) => new Set(t.map((x) => x.toLowerCase())).size === t.length, 'Tags must be unique');
 export const AvailabilitySchema = z.enum(['open', 'not-looking', 'freelance']);
-export const SkillCategorySchema = z.enum(['languages', 'frameworks', 'cloud', 'tools']);
+export const SkillCategorySchema = z.enum(['languages', 'data', 'devops', 'tools']);
 
 export const ProfileSchema = z.strictObject({
   name: z.string().trim().min(1).max(80),
@@ -60,6 +60,7 @@ export const ProjectSchema = z
     imageAlt: z.string().trim().min(1).max(150).optional(),
     repoUrl: HttpsUrlSchema.optional(),
     demoUrl: HttpsUrlSchema.optional(),
+    docUrl: HttpsUrlSchema.optional(),
     featured: z.boolean().default(false),
     date: YearMonthSchema,
   })
@@ -77,7 +78,8 @@ export const SkillSchema = z.strictObject({
     .optional(),
   icon: z
     .string()
-    .regex(/^[a-z0-9]+$/, 'Use lowercase letters and numbers (Simple Icons slug)')
+    // A Simple Icons slug, or `mdi:<kebab-name>` for Material Design Icons (generic shapes Simple Icons lacks).
+    .regex(/^(?:[a-z0-9]+|mdi:[a-z0-9]+(?:-[a-z0-9]+)*)$/, 'Use a Simple Icons slug (e.g. typescript) or mdi:<name> (e.g. mdi:database)')
     .optional(),
 });
 

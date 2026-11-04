@@ -155,6 +155,14 @@ describe('ProjectSchema', () => {
     expect(paths).toContain('imageAlt');
   });
   it('rejects http repoUrl', () => bad(ProjectSchema, { ...project, repoUrl: 'http://github.com/x' }, ['repoUrl']));
+  it('accepts an optional https docUrl and rejects http', () => {
+    ok(ProjectSchema, { ...project, docUrl: 'https://docs.example.com/x' });
+    bad(ProjectSchema, { ...project, docUrl: 'http://docs.example.com/x' }, ['docUrl']);
+  });
+  it('serializes docUrl right after demoUrl', () => {
+    const keys = Object.keys(ProjectSchema.parse({ ...project, repoUrl: 'https://r.x', demoUrl: 'https://d.x', docUrl: 'https://doc.x' }));
+    expect(keys.slice(keys.indexOf('repoUrl'), keys.indexOf('repoUrl') + 3)).toEqual(['repoUrl', 'demoUrl', 'docUrl']);
+  });
   it('rejects bad date', () => bad(ProjectSchema, { ...project, date: '2024-3' }, ['date']));
   it('rejects duplicate tags case-insensitively', () => bad(ProjectSchema, { ...project, tags: ['React', 'react'] }, ['tags']));
   it('rejects more than 12 tags and tags over 30 chars', () => {
@@ -182,12 +190,17 @@ describe('SkillSchema', () => {
     bad(SkillSchema, { ...skill, years: 51 }, ['years']);
     bad(SkillSchema, { ...skill, icon: 'Type-Script' }, ['icon']);
   });
+  it('accepts mdi:<kebab-name> icons and rejects malformed ones', () => {
+    ok(SkillSchema, { ...skill, icon: 'mdi:database' });
+    ok(SkillSchema, { ...skill, icon: 'mdi:language-csharp' });
+    for (const icon of ['mdi:', 'mdi:Database', 'mdi:-chip', 'mdi:chip-', 'mdi:chip--x', 'fa:database', 'mdi:database outline']) bad(SkillSchema, { ...skill, icon }, ['icon']);
+  });
   it('uses friendly messages for icon and years', () => {
     const msg = (v: unknown) => {
       const r = SkillSchema.safeParse(v);
       return r.success ? null : r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
     };
-    expect(msg({ ...skill, icon: 'Type-Script' })).toEqual(['icon: Use lowercase letters and numbers (Simple Icons slug)']);
+    expect(msg({ ...skill, icon: 'Type-Script' })).toEqual(['icon: Use a Simple Icons slug (e.g. typescript) or mdi:<name> (e.g. mdi:database)']);
     expect(msg({ ...skill, years: 51 })).toEqual(['years: Must be between 0 and 50']);
     expect(msg({ ...skill, years: -1 })).toEqual(['years: Must be between 0 and 50']);
     expect(msg({ ...skill, years: 1.5 })).toEqual(['years: Use a whole number of years']);

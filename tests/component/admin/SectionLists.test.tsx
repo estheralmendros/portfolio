@@ -12,15 +12,15 @@ const handlers = () => ({ onRetry: vi.fn(), onNew: vi.fn(), onEdit: vi.fn(), onD
 describe('SkillsList', () => {
   const skills = [
     skill('ts', { name: 'TypeScript', years: 5 }),
-    skill('react', { name: 'React', category: 'frameworks', years: 4 }),
+    skill('react', { name: 'React', category: 'data', years: 4 }),
     skill('js', { name: 'JavaScript', years: 6 }),
-    skill('astro', { name: 'Astro', category: 'frameworks' }),
+    skill('astro', { name: 'Astro', category: 'data' }),
     skill('docker', { name: 'Docker', category: 'tools' }),
   ];
 
   it('groups by category in the public order with headings; empty categories hidden', () => {
     render(<SkillsList state={{ status: 'ready', data: skills, sha: 's' }} {...handlers()} />);
-    expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual(['Languages', 'Frameworks', 'Tools']);
+    expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual(['Languages', 'Data, IoT & AI', 'Dev tools']);
     const languages = screen.getByRole('heading', { name: 'Languages' }).parentElement!;
     expect(within(languages).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       expect.stringContaining('TypeScript'), expect.stringContaining('JavaScript'),

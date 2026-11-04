@@ -20,6 +20,7 @@
   "dependencies": {
     "@astrojs/react": "^7.1.2",
     "@astrojs/sitemap": "^3.7.4",
+    "@mdi/js": "^7.4.47",
     "@octokit/rest": "^22.0.1",
     "@tailwindcss/vite": "^4.3.4",
     "astro": "^7.4.5",

@@ -108,6 +108,20 @@ describe('ProjectCard', () => {
     const demo = screen.getByRole('link', { name: 'Demo for Fixture Alpha (opens in new tab)' });
     for (const link of [repo, demo]) expect(within(link).getByText('↗')).toHaveAttribute('aria-hidden', 'true');
   });
+  it('shows a Documentation link only when docUrl is set', () => {
+    render(<ProjectCard project={{ ...alpha, docUrl: 'https://docs.example.com/alpha' }} hasDetail={false} />);
+    const doc = screen.getByRole('link', { name: 'Documentation for Fixture Alpha (opens in new tab)' });
+    expect(doc).toHaveAttribute('href', 'https://docs.example.com/alpha');
+    expect(doc).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(doc).getByText('↗')).toHaveAttribute('aria-hidden', 'true');
+    cleanup();
+    render(<ProjectCard project={alpha} hasDetail={false} />);
+    expect(screen.queryByRole('link', { name: /Documentation/ })).toBeNull();
+  });
+  it('a docUrl alone still renders the links row', () => {
+    render(<ProjectCard project={{ ...gamma, docUrl: 'https://docs.example.com/g' }} hasDetail={false} />);
+    expect(screen.getByRole('link', { name: /Documentation/ })).toBeInTheDocument();
+  });
   it('omits image, links and Read more when absent', () => {
     const { container } = render(<ProjectCard project={gamma} hasDetail={false} />);
     expect(container.querySelector('img')).toBeNull();
@@ -192,8 +206,15 @@ describe('ProjectDetail', () => {
     expect(screen.getByRole('link', { name: /Live demo/ })).toHaveAttribute('rel', 'noopener noreferrer');
     expect(screen.getByRole('heading', { level: 2, name: 'Rendered' })).toBeInTheDocument();
   });
+  it('shows a Documentation button when docUrl is set, even without repo or demo', () => {
+    render(<ProjectDetail project={{ ...admin, docUrl: 'https://docs.example.com/admin' }} html="<p>x</p>" />);
+    const doc = screen.getByRole('link', { name: /^Read Documentation ↗/ });
+    expect(doc).toHaveAttribute('href', 'https://docs.example.com/admin');
+    expect(doc).toHaveAttribute('target', '_blank');
+  });
   it('omits optional parts', () => {
     const { container } = render(<ProjectDetail project={admin} html="<p>x</p>" />);
+    expect(screen.queryByRole('link', { name: /Documentation/ })).toBeNull();
     expect(container.querySelector('img')).toBeNull();
     expect(screen.queryByRole('link', { name: /View repository/ })).toBeNull();
   });
@@ -216,11 +237,11 @@ describe('Stack', () => {
   it('groups skills in fixed category order, hiding empty groups', () => {
     const skills = [
       { id: 'd', name: 'Docker', category: 'tools' as const },
-      { id: 'r', name: 'React', category: 'frameworks' as const },
+      { id: 'r', name: 'React', category: 'data' as const },
       { id: 't', name: 'TypeScript', category: 'languages' as const },
     ];
     render(<SkillsSection skills={skills} icons={{}} />);
-    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Languages', 'Frameworks', 'Tools']);
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Languages', 'Data, IoT & AI', 'Dev tools']);
   });
   it('renders nothing for no skills', () => expect(renderToStaticMarkup(<SkillsSection skills={[]} icons={{}} />)).toBe(''));
 });

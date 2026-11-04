@@ -30,7 +30,7 @@ test.describe('home page', () => {
   test('stack, certifications and journey details', async ({ page }) => {
     await page.goto('./');
     const stack = page.locator('#stack');
-    await expect(stack.getByRole('heading', { level: 3 })).toHaveText(['Languages', 'Frameworks', 'Tools']);
+    await expect(stack.getByRole('heading', { level: 3 })).toHaveText(['Languages', 'Data, IoT & AI', 'Dev tools']);
     await expect(stack.getByText('Fi', { exact: true })).toBeAttached(); // unknown icon -> initials
     await expect(page.locator('#certifications').getByText('Expired', { exact: true })).toHaveCount(1);
     await expect(page.locator('#journey').getByText('Jan 2022 – Present')).toBeVisible();

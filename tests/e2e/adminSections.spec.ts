@@ -87,8 +87,8 @@ test.describe('skills', () => {
     await loggedIn(page);
     await openTab(page, 'Skills');
     await expect(page).toHaveURL(/#\/skills$/);
-    for (const category of ['Languages', 'Frameworks', 'Tools']) await expect(page.getByRole('heading', { name: category })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Cloud' })).toHaveCount(0);
+    for (const category of ['Languages', 'Data, IoT & AI', 'Dev tools']) await expect(page.getByRole('heading', { name: category })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'DevOps & Cloud' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit TypeScript' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete Docker' })).toBeVisible();
   });
@@ -100,7 +100,7 @@ test.describe('skills', () => {
     await expect(page).toHaveURL(/#\/skills\/new$/);
     await page.getByLabel(/^Name/).fill('Go Lang');
     await expect(page.getByLabel(/^Id/)).toHaveValue('go-lang');
-    await page.getByLabel(/^Category/).selectOption({ label: 'Frameworks' });
+    await page.getByLabel(/^Category/).selectOption({ label: 'Data, IoT & AI' });
     await page.getByLabel(/^Years/).fill('2');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText(SAVED)).toBeVisible();
@@ -108,7 +108,7 @@ test.describe('skills', () => {
     const put = putJson<Skill[]>(gh);
     expect(put.message).toBe('content(skills): add "Go Lang"');
     expect(put.data.map((s) => s.id)).toEqual(['typescript', 'fixturelang', 'go-lang', 'react', 'docker']);
-    expect(put.data[2]).toEqual({ id: 'go-lang', name: 'Go Lang', category: 'frameworks', years: 2 });
+    expect(put.data[2]).toEqual({ id: 'go-lang', name: 'Go Lang', category: 'data', years: 2 });
   });
 
   test('edit keeps the id read-only and commits an update', async ({ page }) => {
@@ -122,7 +122,7 @@ test.describe('skills', () => {
     await expect(page.getByText(SAVED)).toBeVisible();
     const put = putJson<Skill[]>(gh);
     expect(put.message).toBe('content(skills): update "React"');
-    expect(put.data.find((s) => s.id === 'react')).toEqual({ id: 'react', name: 'React', category: 'frameworks', years: 6, icon: 'react' });
+    expect(put.data.find((s) => s.id === 'react')).toEqual({ id: 'react', name: 'React', category: 'data', years: 6, icon: 'react' });
   });
 
   test('duplicate name (case-insensitive) is blocked without a request', async ({ page }) => {

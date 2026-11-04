@@ -20,7 +20,7 @@ export function ProjectCard({ project, image, hasDetail, featured = false }: { p
         </div>
         <p className="leading-relaxed text-muted">{project.summary}</p>
         <TagList tags={project.tags} />
-        {(project.repoUrl || project.demoUrl || hasDetail) && (
+        {(project.repoUrl || project.demoUrl || project.docUrl || hasDetail) && (
           <div className="mt-auto flex flex-wrap gap-5 border-t border-line pt-4 text-sm">
             {project.repoUrl && (
               <ExternalLink href={project.repoUrl} className="card-link">
@@ -30,6 +30,11 @@ export function ProjectCard({ project, image, hasDetail, featured = false }: { p
             {project.demoUrl && (
               <ExternalLink href={project.demoUrl} className="card-link">
                 Demo <span className="sr-only">for {project.title}</span> <span aria-hidden="true">↗</span>
+              </ExternalLink>
+            )}
+            {project.docUrl && (
+              <ExternalLink href={project.docUrl} className="card-link">
+                Documentation <span className="sr-only">for {project.title}</span> <span aria-hidden="true">↗</span>
               </ExternalLink>
             )}
             {hasDetail && (

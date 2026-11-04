@@ -156,13 +156,13 @@ describe('moveEntry', () => {
     }
   });
   it('with sameGroup swaps with the nearest neighbour of the same group', () => {
-    const skills = [sk('ts', 'languages'), sk('react', 'frameworks'), sk('go', 'languages'), sk('vue', 'frameworks')];
+    const skills = [sk('ts', 'languages'), sk('react', 'data'), sk('go', 'languages'), sk('vue', 'data')];
     const same = (x: Skill, y: Skill) => x.category === y.category;
     expect(moveEntry(skills, 'go', 'up', same).map((x) => x.id)).toEqual(['go', 'react', 'ts', 'vue']);
     expect(moveEntry(skills, 'react', 'down', same).map((x) => x.id)).toEqual(['ts', 'vue', 'go', 'react']);
   });
   it('with sameGroup is a no-op at the group boundary', () => {
-    const skills = [sk('ts', 'languages'), sk('react', 'frameworks'), sk('go', 'languages')];
+    const skills = [sk('ts', 'languages'), sk('react', 'data'), sk('go', 'languages')];
     const same = (x: Skill, y: Skill) => x.category === y.category;
     expect(moveEntry(skills, 'ts', 'up', same)).toEqual(skills);
     expect(moveEntry(skills, 'go', 'down', same)).toEqual(skills);
@@ -172,14 +172,14 @@ describe('moveEntry', () => {
 });
 
 describe('insertSkill', () => {
-  const skills = [sk('ts', 'languages'), sk('react', 'frameworks'), sk('go', 'languages')];
+  const skills = [sk('ts', 'languages'), sk('react', 'data'), sk('go', 'languages')];
   it('inserts before the first skill of the same category without mutating', () => {
-    expect(insertSkill(skills, sk('vue', 'frameworks')).map((x) => x.id)).toEqual(['ts', 'vue', 'react', 'go']);
+    expect(insertSkill(skills, sk('vue', 'data')).map((x) => x.id)).toEqual(['ts', 'vue', 'react', 'go']);
     expect(insertSkill(skills, sk('rust', 'languages')).map((x) => x.id)).toEqual(['rust', 'ts', 'react', 'go']);
     expect(skills).toHaveLength(3);
   });
   it('appends when the category is new', () =>
-    expect(insertSkill(skills, sk('aws', 'cloud')).map((x) => x.id)).toEqual(['ts', 'react', 'go', 'aws']));
+    expect(insertSkill(skills, sk('aws', 'devops')).map((x) => x.id)).toEqual(['ts', 'react', 'go', 'aws']));
   it('throws ValidationError on a duplicate id', () => expect(() => insertSkill(skills, sk('go', 'tools'))).toThrow(ValidationError));
 });
 

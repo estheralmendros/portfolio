@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { siTypescript } from 'simple-icons';
+import { mdiDatabase } from '@mdi/js';
 import { isInternalUrlOk } from './internalUrl';
 
 const DIR = path.resolve(process.env.SMOKE_DIR ?? 'dist');
@@ -171,6 +172,7 @@ describe(`smoke: ${path.relative(process.cwd(), DIR) || DIR}`, () => {
     for (const f of files) {
       const js = readFileSync(f, 'utf8');
       expect(js, path.relative(DIR, f)).not.toContain(iconPath);
+      expect(js, path.relative(DIR, f)).not.toContain(mdiDatabase.slice(0, 40));
       expect(js, path.relative(DIR, f)).not.toMatch(/slug:\s*"typescript"|"slug":\s*"typescript"/);
       expect(js, path.relative(DIR, f)).not.toContain('/src/assets/uploads/');
       expect(js, path.relative(DIR, f)).not.toContain('fixture-000000');

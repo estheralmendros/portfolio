@@ -42,7 +42,7 @@ export function fakeClient(
 ) {
   const files = new Map<string, { content: string; sha: string }>([
     ['content/projects.json', { content: json(opts.projects ?? [project('a'), project('b')]), sha: opts.sha ?? 'sha-1' }],
-    ['content/skills.json', { content: json(opts.skills ?? [skill('ts', { name: 'TypeScript' }), skill('react', { name: 'React', category: 'frameworks' })]), sha: 'skills-sha-1' }],
+    ['content/skills.json', { content: json(opts.skills ?? [skill('ts', { name: 'TypeScript' }), skill('react', { name: 'React', category: 'data' })]), sha: 'skills-sha-1' }],
     ['content/certifications.json', { content: json(opts.certifications ?? [certification('c1'), certification('c2')]), sha: 'certifications-sha-1' }],
     ['content/experience.json', { content: json(opts.experience ?? [experience('e1'), experience('e2')]), sha: 'experience-sha-1' }],
     ['content/profile.json', { content: json(opts.profile ?? profile()), sha: 'profile-sha-1' }],

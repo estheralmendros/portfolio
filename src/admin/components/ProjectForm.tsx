@@ -26,12 +26,13 @@ interface Values {
   imageAlt: string;
   repoUrl: string;
   demoUrl: string;
+  docUrl: string;
   featured: boolean;
   date: string;
 }
 
 /** Field order = focus order for the first invalid field. */
-const FIELD_ORDER = ['title', 'id', 'summary', 'description', 'tags', 'image', 'imageAlt', 'repoUrl', 'demoUrl', 'featured', 'date'] as const;
+const FIELD_ORDER = ['title', 'id', 'summary', 'description', 'tags', 'image', 'imageAlt', 'repoUrl', 'demoUrl', 'docUrl', 'featured', 'date'] as const;
 type FieldName = (typeof FIELD_ORDER)[number];
 const REQUIRED: FieldName[] = ['title', 'id', 'summary', 'date'];
 
@@ -47,6 +48,7 @@ function toRaw(v: Values, upload: PendingUpload | null) {
     imageAlt: v.imageAlt,
     repoUrl: v.repoUrl.trim(),
     demoUrl: v.demoUrl.trim(),
+    docUrl: v.docUrl.trim(),
     featured: v.featured,
     date: v.date.trim(),
   });
@@ -65,6 +67,7 @@ function previewProject(v: Values, upload: PendingUpload | null): Project {
     ...opt('imageAlt', v.imageAlt.trim() === '' ? undefined : v.imageAlt),
     ...opt('repoUrl', httpsOrUndefined(v.repoUrl)),
     ...opt('demoUrl', httpsOrUndefined(v.demoUrl)),
+    ...opt('docUrl', httpsOrUndefined(v.docUrl)),
     featured: v.featured,
     date: monthOrPlaceholder(v.date),
   };
@@ -81,6 +84,7 @@ function toValues(p?: Project): Values {
     imageAlt: p?.imageAlt ?? '',
     repoUrl: p?.repoUrl ?? '',
     demoUrl: p?.demoUrl ?? '',
+    docUrl: p?.docUrl ?? '',
     featured: p?.featured ?? false,
     date: p?.date ?? '',
   };
@@ -203,6 +207,7 @@ export function ProjectForm({
         {text('imageAlt', 'Image alt text')}
         {text('repoUrl', 'Repo URL', undefined, 'url')}
         {text('demoUrl', 'Demo URL', undefined, 'url')}
+        {text('docUrl', 'Documentation URL', undefined, 'url')}
         <div className="flex flex-wrap items-end gap-6">
           <label className="flex items-center gap-2 font-medium">
             <input type="checkbox" name="featured" checked={values.featured} onChange={(e) => set('featured', e.target.checked)} />

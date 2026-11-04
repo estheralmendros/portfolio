@@ -88,14 +88,14 @@ describe('AdminApp navigation', () => {
 
 describe('AdminApp section CRUD (one commit each, per-file SHA)', () => {
   it('skills: create inserts at the top of its category with the add message', async () => {
-    const client = fakeClient({ skills: [skill('ts', { name: 'TypeScript' }), skill('react', { name: 'React', category: 'frameworks' }), skill('js', { name: 'JavaScript' })] });
+    const client = fakeClient({ skills: [skill('ts', { name: 'TypeScript' }), skill('react', { name: 'React', category: 'data' }), skill('js', { name: 'JavaScript' })] });
     setup(client);
     await login();
     await userEvent.click(tab('Skills'));
     await userEvent.click(await screen.findByRole('button', { name: '+ New skill' }));
     expect(window.location.hash).toBe('#/skills/new');
     await userEvent.type(screen.getByLabelText(/^Name/), 'Vue');
-    await userEvent.selectOptions(screen.getByLabelText(/^Category/), 'frameworks');
+    await userEvent.selectOptions(screen.getByLabelText(/^Category/), 'data');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Saved. The site will update after the next deploy (a few minutes).')).toBeInTheDocument();
     const put = lastPut(client);

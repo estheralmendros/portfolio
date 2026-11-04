@@ -20,7 +20,7 @@ export function ProjectDetail({ project, image, html }: { project: Project; imag
         </div>
       </header>
       {image && <img src={image.src} alt={project.imageAlt ?? ''} decoding="async" className="aspect-video w-full rounded-lg object-cover" />}
-      {(project.repoUrl || project.demoUrl) && (
+      {(project.repoUrl || project.demoUrl || project.docUrl) && (
         <div className="flex flex-wrap gap-3">
           {project.repoUrl && (
             <ExternalLink href={project.repoUrl} className="btn-primary">
@@ -30,6 +30,11 @@ export function ProjectDetail({ project, image, html }: { project: Project; imag
           {project.demoUrl && (
             <ExternalLink href={project.demoUrl} className="btn-secondary">
               Live demo ↗
+            </ExternalLink>
+          )}
+          {project.docUrl && (
+            <ExternalLink href={project.docUrl} className="btn-secondary">
+              Read Documentation ↗
             </ExternalLink>
           )}
         </div>

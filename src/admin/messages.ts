@@ -47,7 +47,7 @@ export const DEPLOY = {
 export { SKILL_CATEGORY_LABELS } from '../lib/skills';
 export const AVAILABILITY_LABELS = { open: 'Open to opportunities', 'not-looking': 'Not looking', freelance: 'Available for freelance' } as const;
 export const ID_LOCKED_HINT = 'The id cannot change.';
-export const ICON_HINT = 'e.g. typescript — see simpleicons.org';
+export const ICON_HINT = 'e.g. typescript (simpleicons.org) or mdi:database (pictogrammers.com)';
 export const WHOLE_NUMBER = 'Enter a whole number';
 export const MAX_HIGHLIGHTS = 'Use at most 8 highlights';
 export const idTaken = (label: string, noun = 'id') => `This ${noun} is already used by '${label}'`;

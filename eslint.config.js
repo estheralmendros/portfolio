@@ -53,7 +53,10 @@ export default tseslint.config(
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
-          paths: [{ name: 'simple-icons', message: 'simple-icons is build-only; the admin uses the initials fallback.', allowTypeImports: true }],
+          paths: [
+            { name: 'simple-icons', message: 'simple-icons is build-only; the admin uses the initials fallback.', allowTypeImports: true },
+            { name: '@mdi/js', message: '@mdi/js is build-only; the admin uses the initials fallback.', allowTypeImports: true },
+          ],
           patterns: [
             {
               group: ['simple-icons/*', '**/lib/images', '**/lib/images.*', '**/lib/icons', '**/lib/icons.*'],
