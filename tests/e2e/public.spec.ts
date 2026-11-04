@@ -42,6 +42,24 @@ test.describe('home page', () => {
     expect(hrefs.filter((h) => h === '/portfolio/admin' || h.startsWith('/portfolio/admin/'))).toEqual([]);
   });
 
+  test('the header link for the section in the URL hash is marked current with an accent ring', async ({ page }) => {
+    await page.goto('./#about');
+    const nav = page.getByRole('navigation', { name: 'Sections', exact: true });
+    const about = nav.getByRole('link', { name: 'About' });
+    const projects = nav.getByRole('link', { name: 'Projects' });
+    await expect(about).toHaveAttribute('aria-current', 'location');
+    await expect(nav.locator('[aria-current]')).toHaveCount(1);
+    const ring = (l: typeof about) => l.evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(await ring(about)).not.toBe('none');
+    expect(await ring(projects)).toBe('none');
+    await projects.click();
+    await expect(page).toHaveURL(/#projects$/);
+    await expect(projects).toHaveAttribute('aria-current', 'location');
+    await expect(about).not.toHaveAttribute('aria-current', /.*/);
+    await page.goto('./');
+    await expect(nav.locator('[aria-current]')).toHaveCount(0);
+  });
+
   test('mobile: nav collapses to a Menu disclosure', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     await page.goto('./');

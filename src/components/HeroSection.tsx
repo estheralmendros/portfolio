@@ -42,7 +42,7 @@ export function HeroSection({ profile, photo, hasProjects = false }: { profile: 
         <div className="mt-2 flex flex-wrap items-center gap-3">
           {hasProjects && (
             <a href="#projects" className="btn-cta">
-              See my work <span aria-hidden="true">→</span>
+              See my work <span aria-hidden="true">↗</span>
             </a>
           )}
           {profile.cvUrl && (

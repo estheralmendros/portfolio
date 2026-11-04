@@ -288,6 +288,11 @@
     color: var(--color-fg);
     background: var(--color-surface);
   }
+  /* Section in the URL hash (src/scripts/navActive.ts): inset ring, so no layout shift. */
+  .nav-link[aria-current='location'] {
+    color: var(--color-fg);
+    box-shadow: inset 0 0 0 1.5px var(--color-accent);
+  }
   /* Header menu / theme toggle (moved out of the components' scoped <style> to avoid an extra CSS file). */
   .mobile-menu summary::-webkit-details-marker {
     display: none;
