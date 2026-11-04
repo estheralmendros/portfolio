@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { SkillForm } from '../../../src/admin/components/SkillForm';
 import { ConflictError, PermissionError } from '../../../src/admin/lib/errors';
 import { skill } from './fakeClient';
+import { previewPane } from '../fixtures';
 
 const existing = [skill('typescript', { name: 'TypeScript' }), skill('go', { name: 'Go', category: 'tools' })];
 
@@ -25,7 +26,7 @@ describe('SkillForm', () => {
     expect(Array.from((category as HTMLSelectElement).options).filter((o) => o.value).map((o) => o.textContent)).toEqual([
       'Languages', 'Frameworks', 'Cloud', 'Tools',
     ]);
-    expect(screen.getByLabelText(/^Years/)).toHaveAttribute('type', 'number');
+    expect(screen.getByLabelText(/^Years/)).toHaveAttribute('inputmode', 'numeric'); // text + numeric keyboard: bad input is reported (review S4)
     expect(screen.getByLabelText(/^Icon/)).toBeInTheDocument();
     expect(screen.getByText('e.g. typescript — see simpleicons.org')).toBeInTheDocument();
   });
@@ -141,7 +142,6 @@ describe('SkillForm', () => {
 });
 
 describe('SkillForm (preview, prd2 Feature 5)', () => {
-  const previewPane = () => screen.getByLabelText('Preview', { selector: '[inert]' });
 
   it('create: SkillsSection with the full list, the draft inserted at the top of its category; initials only + note', async () => {
     setup();

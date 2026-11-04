@@ -23,3 +23,10 @@ it('README › Security states the shared-origin owner rule', () => {
   expect(security).toContain('sessionStorage');
   expect(security).toMatch(/may load third-party or analytics scripts/);
 });
+
+it('README › Deployment warns that GitHub disables the weekly schedule after 60 days of inactivity', () => {
+  const usage = section('Usage');
+  expect(usage).toMatch(/60 days/);
+  expect(usage).toMatch(/schedule/i);
+  expect(usage).toMatch(/Expired/);
+});

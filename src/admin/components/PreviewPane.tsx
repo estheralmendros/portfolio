@@ -46,6 +46,8 @@ export function PreviewPane<T>({
 }) {
   const shown = useDebouncedValue(snapshot, delayMs);
   const isValid = useDebouncedValue(valid, delayMs);
+  // aria-busy while a change waits for the debounce (also lets e2e wait for a settled preview).
+  const pending = !Object.is(shown, snapshot) || isValid !== valid;
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">{PREVIEW}</h2>
@@ -56,7 +58,7 @@ export function PreviewPane<T>({
         </p>
       )}
       {note && <p className="text-sm text-muted">{note}</p>}
-      <div inert aria-label={PREVIEW} className="overflow-hidden rounded-lg border border-line bg-bg p-4">
+      <div inert role="region" aria-label={PREVIEW} aria-busy={pending || undefined} className="overflow-hidden rounded-lg border border-line bg-bg p-4">
         <PreviewBoundary resetKey={shown}>
           <PreviewContent snapshot={shown} render={render} />
         </PreviewBoundary>

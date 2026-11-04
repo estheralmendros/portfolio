@@ -2,7 +2,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import type { FakeGitHub, ScriptedRun } from './fixtures/fakeGitHub';
-import { badge, chooseFile, image, loggedIn, openTab, seededGitHub, trackExternalRequests } from './fixtures/admin';
+import { badge, chooseFile, image, loggedIn, openTab, previewPane, seededGitHub, trackExternalRequests } from './fixtures/admin';
 
 let gh: FakeGitHub;
 let external: string[];
@@ -18,8 +18,8 @@ test.afterEach(() => {
 });
 
 async function expectNoSeriousViolations(page: Page) {
-  // Let the debounced preview (150 ms) settle before scanning.
-  await page.waitForTimeout(250);
+  // Let the debounced preview (150 ms) settle before scanning: it is aria-busy while a change is pending.
+  await expect(previewPane(page).and(page.locator('[aria-busy="true"]'))).toHaveCount(0);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
   expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
@@ -102,7 +102,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByText('CV will be removed when you save')).toBeVisible();
       await expectNoSeriousViolations(page);
       await page.getByRole('tab', { name: 'Preview' }).click();
-      await expect(page.locator('[inert][aria-label="Preview"]')).toBeVisible();
+      await expect(previewPane(page)).toBeVisible();
       await expectNoSeriousViolations(page);
     });
 

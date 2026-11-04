@@ -98,6 +98,8 @@ const APP_ERRORS = [
   ImageError, CvError, GitHubApiError,
 ];
 
+const FETCH_FAILURE_RE = /fetch|network|load failed/i;
+
 /** Normalizes anything thrown by fetch/Octokit into an errors.ts class. */
 export function toAppError(err: unknown): Error {
   if (APP_ERRORS.some((C) => err instanceof C)) return err as Error;
@@ -106,7 +108,9 @@ export function toAppError(err: unknown): Error {
     const message = e.response?.data?.message ?? e.message ?? '';
     return mapHttpError(e.status, e.response?.headers ?? {}, message);
   }
-  if (err instanceof TypeError) return new NetworkError(err.message);
+  // fetch rejects with a TypeError on network failure (Chromium "Failed to fetch", Firefox "NetworkError when
+  // attempting to fetch resource.", Safari "Load failed"); other TypeErrors are bugs and stay generic.
+  if (err instanceof TypeError && FETCH_FAILURE_RE.test(err.message)) return new NetworkError(err.message);
   return err instanceof Error ? err : new Error(String(err));
 }
 

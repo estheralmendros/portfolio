@@ -37,12 +37,35 @@ async function nextPoll(page: Page) {
   await page.clock.runFor(POLL_MS);
 }
 
+/**
+ * A poll's request reaches the fake asynchronously after the clock fires it (and the next poll is only scheduled once
+ * that response is handled), so a "no more polls" check has no event to await: it advances the clock and then waits
+ * this fixed real-time window for a request that must never arrive.
+ */
+const NO_POLL_WINDOW_MS = 500;
+
+/** Advances the clock by `polls` poll intervals, letting each poll's request (if any) land before the next. */
+async function advancePolls(page: Page, polls = 2) {
+  for (let i = 0; i < polls; i += 1) {
+    await nextPoll(page);
+    await page.waitForTimeout(NO_POLL_WINDOW_MS);
+  }
+}
+
+/** Asserts that `count()` does not grow over two more poll intervals. */
+async function expectNoMorePolls(page: Page, count: () => number) {
+  const before = count();
+  await advancePolls(page);
+  expect(count()).toBe(before);
+}
+
 test('idle until the first commit; Deploying… → Live with a View site link', async ({ page }) => {
   gh.scriptRuns([null, { status: 'queued' }, { status: 'in_progress', run_started_at: new Date().toISOString() }, { status: 'completed', conclusion: 'success' }]);
   await loggedIn(page);
   await expect(badge(page)).toHaveText('');
   const sha = await saveProfile(page, { login: false });
   await expect(badge(page)).toContainText('Deploying…');
+  await expect.poll(() => runRequests().length).toBeGreaterThan(0);
   const first = runRequests()[0]!;
   expect(first.query).toEqual({ head_sha: sha, per_page: '1' });
   await nextPoll(page);
@@ -53,10 +76,7 @@ test('idle until the first commit; Deploying… → Live with a View site link',
   await expect(badge(page)).toContainText('Live');
   await expect(badge(page).getByRole('link', { name: /View site/ })).toHaveAttribute('href', 'https://estheralmendros.github.io/portfolio/');
   // Polling stopped on completion.
-  const calls = runRequests().length;
-  await nextPoll(page);
-  await nextPoll(page);
-  expect(runRequests().length).toBe(calls);
+  await expectNoMorePolls(page, () => runRequests().length);
 });
 
 const terminal: { name: string; run: ScriptedRun; text: string; link: RegExp; href: string | RegExp; hint?: string }[] = [
@@ -82,9 +102,7 @@ for (const t of terminal) {
     await expect(badge(page).getByRole('link', { name: t.link })).toHaveAttribute('href', t.href);
     if (t.hint) await expect(badge(page)).toContainText(t.hint);
     else await expect(badge(page)).not.toContainText('Add Actions: Read to your token');
-    const calls = runRequests().length;
-    await nextPoll(page);
-    expect(runRequests().length).toBe(calls);
+    await expectNoMorePolls(page, () => runRequests().length);
   });
 }
 
@@ -97,16 +115,13 @@ test('a new commit restarts polling for the new SHA; logout stops it', async ({ 
   await expect.poll(() => gh.headSha).not.toBe(first);
   const second = gh.headSha;
   await expect.poll(() => runRequests().some((r) => r.query['head_sha'] === second)).toBe(true);
-  const firstCalls = runRequests().filter((r) => r.query['head_sha'] === first).length;
-  await nextPoll(page);
-  await nextPoll(page);
-  expect(runRequests().filter((r) => r.query['head_sha'] === first).length).toBe(firstCalls);
-  expect(runRequests().filter((r) => r.query['head_sha'] === second).length).toBeGreaterThanOrEqual(2);
+  const forSha = (sha: string) => () => runRequests().filter((r) => r.query['head_sha'] === sha).length;
+  const firstCalls = forSha(first)();
+  await advancePolls(page);
+  expect(forSha(first)()).toBe(firstCalls);
+  await expect.poll(forSha(second)).toBeGreaterThanOrEqual(2);
 
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page.getByLabel('GitHub fine-grained token')).toBeVisible();
-  const calls = runRequests().length;
-  await nextPoll(page);
-  await nextPoll(page);
-  expect(runRequests().length).toBe(calls);
+  await expectNoMorePolls(page, () => runRequests().length);
 });

@@ -1,10 +1,9 @@
 import type { Project } from '../content/schema';
 import type { ResolvedImage } from '../lib/imageResolver';
 import { collectTags, encodeTags } from '../lib/projectFilter';
+import { hasDetailPage } from '../lib/projects';
 import { ProjectCard } from './ProjectCard';
 import { ProjectFilter } from './ProjectFilter';
-
-export const hasDetailPage = (p: Project): boolean => p.description.trim() !== '';
 
 function Group({ id, group, title, projects, images, cols }: { id: string; group: 'featured' | 'more'; title: string; projects: Project[]; images: Record<string, ResolvedImage | undefined>; cols: string }) {
   if (projects.length === 0) return null;

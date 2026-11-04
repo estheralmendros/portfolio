@@ -44,11 +44,19 @@ export interface ProcessedImage {
   height: number;
 }
 
+export interface DecodedImage {
+  width: number;
+  height: number;
+  source: CanvasImageSource;
+  /** Frees resources tied to `source` (e.g. the SVG's blob: URL); called once encoding has finished. */
+  release?: () => void;
+}
+
 export interface ImageCodec {
   /** createImageBitmap */
-  decode(file: Blob): Promise<{ width: number; height: number; source: CanvasImageSource }>;
+  decode(file: Blob): Promise<DecodedImage>;
   /** <img> via a blob: URL (scripts and external resources stay inert); width/height may be 0. */
-  decodeSvg(file: Blob): Promise<{ width: number; height: number; source: CanvasImageSource }>;
+  decodeSvg(file: Blob): Promise<DecodedImage>;
   /** Draws to a canvas and calls toBlob; throws on a tainted canvas or a null blob. */
   encode(src: CanvasImageSource, w: number, h: number, type: string, quality?: number): Promise<Blob>;
 }
@@ -61,6 +69,7 @@ export const browserCodec: ImageCodec = {
   },
   async decodeSvg(file) {
     const url = URL.createObjectURL(file);
+    const release = () => URL.revokeObjectURL(url);
     try {
       const img = new Image();
       await new Promise<void>((resolve, reject) => {
@@ -68,9 +77,11 @@ export const browserCodec: ImageCodec = {
         img.onerror = () => reject(new Error('SVG failed to load'));
         img.src = url;
       });
-      return { width: img.naturalWidth, height: img.naturalHeight, source: img };
-    } finally {
-      URL.revokeObjectURL(url);
+      // The URL stays alive until encode has redrawn the image (some engines re-fetch it on draw).
+      return { width: img.naturalWidth, height: img.naturalHeight, source: img, release };
+    } catch (e) {
+      release();
+      throw e;
     }
   },
   async encode(src, w, h, type, quality) {
@@ -88,7 +99,10 @@ export const browserCodec: ImageCodec = {
   },
 };
 
-const release = (source: CanvasImageSource) => (source as Partial<ImageBitmap>).close?.();
+const release = (decoded: DecodedImage) => {
+  (decoded.source as Partial<ImageBitmap>).close?.();
+  decoded.release?.();
+};
 
 /** Throws ImageError with the Feature 3 message. SVG (badges only) → PNG. */
 export async function processImage(file: File, kind: ImageKind, codec: ImageCodec = browserCodec): Promise<ProcessedImage> {
@@ -107,7 +121,7 @@ export async function processImage(file: File, kind: ImageKind, codec: ImageCode
     try {
       blob = await codec.encode(decoded.source, size.width, size.height, type, quality);
     } finally {
-      release(decoded.source);
+      release(decoded);
     }
   } catch {
     throw new ImageError(unreadable);

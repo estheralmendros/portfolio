@@ -40,7 +40,7 @@ describe('DeployStatusBadge', () => {
   });
 
   it('superseded: "Replaced by a newer deploy" + Open Actions, never "Failed"', () => {
-    const el = badge({ kind: 'superseded', runUrl: RUN });
+    const el = badge({ kind: 'superseded' });
     expect(el).toHaveTextContent('Replaced by a newer deploy');
     expect(el).not.toHaveTextContent('Failed');
     expect(screen.getByRole('link', { name: /Open Actions/ })).toHaveAttribute('href', ACTIONS);

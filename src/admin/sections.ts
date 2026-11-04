@@ -1,12 +1,13 @@
 import type { Certification, Experience, Project, Skill } from '../content/schema';
+import { NAV_LABELS } from './messages';
 import type { ListSection } from './useHashRoute';
 
-/** Per-section copy for headings, buttons and messages. */
+/** Per-section copy for headings, buttons and messages; the title is the nav label (one source, review S3b). */
 export const SECTION_META: Record<ListSection, { title: string; singular: string; plural: string }> = {
-  projects: { title: 'Projects', singular: 'project', plural: 'projects' },
-  skills: { title: 'Skills', singular: 'skill', plural: 'skills' },
-  certifications: { title: 'Certifications', singular: 'certification', plural: 'certifications' },
-  experience: { title: 'Experience', singular: 'experience', plural: 'experience' },
+  projects: { title: NAV_LABELS.projects, singular: 'project', plural: 'projects' },
+  skills: { title: NAV_LABELS.skills, singular: 'skill', plural: 'skills' },
+  certifications: { title: NAV_LABELS.certifications, singular: 'certification', plural: 'certifications' },
+  experience: { title: NAV_LABELS.experience, singular: 'experience', plural: 'experience' },
 };
 
 export interface SectionEntries {

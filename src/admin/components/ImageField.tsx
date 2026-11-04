@@ -16,7 +16,7 @@ import { FieldError } from './formKit';
 export type ProcessFn = (file: File, kind: ImageKind) => Promise<ProcessedImage>;
 
 export function ImageField({
-  name, label, kind, alt, value, onValueChange, pending, onPendingChange, onRemove, error, hint = IMAGE_REF_HINT, process = processImage,
+  name, label, kind, alt, value, onValueChange, pending, onPendingChange, onBusyChange, onRemove, error, hint = IMAGE_REF_HINT, process = processImage,
 }: {
   /** Form field name (`image`, `photo`, `badge`): the text input is `#f-<name>` for focus-first-error. */
   name: string;
@@ -27,6 +27,8 @@ export function ImageField({
   onValueChange: (value: string) => void;
   pending: PendingUpload | null;
   onPendingChange: (pending: PendingUpload | null) => void;
+  /** Processing state for the form: Save stays disabled while an image is being processed (review W7). */
+  onBusyChange?: (busy: boolean) => void;
   /** Extra clean-up on Remove (projects also clear imageAlt). */
   onRemove?: () => void;
   error?: string;
@@ -47,6 +49,15 @@ export function ImageField({
       mounted.current = false;
     };
   }, []);
+
+  const busyRef = useRef(onBusyChange);
+  useEffect(() => {
+    busyRef.current = onBusyChange;
+  });
+  useEffect(() => {
+    busyRef.current?.(busy);
+  }, [busy]);
+  useEffect(() => () => busyRef.current?.(false), []);
 
   // The object URL lives as long as its PendingUpload: revoked on replace, Remove, typing and unmount.
   const objectUrl = pending?.objectUrl;
@@ -162,6 +173,7 @@ export function ImageField({
             type="text"
             className="field-input"
             value={value}
+            disabled={busy}
             aria-invalid={error ? true : undefined}
             aria-describedby={[error ? errorId : null, hintId].filter(Boolean).join(' ')}
             onChange={(e) => type(e.target.value)}

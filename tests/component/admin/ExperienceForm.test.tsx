@@ -4,6 +4,7 @@ import { TimelineItem } from '../../../src/components/TimelineItem';
 import userEvent from '@testing-library/user-event';
 import { ExperienceForm } from '../../../src/admin/components/ExperienceForm';
 import { experience } from './fakeClient';
+import { previewPane } from '../fixtures';
 
 const existing = [experience('engineer-acme', { role: 'Engineer', org: 'Acme' })];
 
@@ -133,7 +134,6 @@ describe('ExperienceForm', () => {
 });
 
 describe('ExperienceForm (preview, prd2 Feature 5)', () => {
-  const previewPane = () => screen.getByLabelText('Preview', { selector: '[inert]' });
 
   it('renders TimelineItem with the same markup as the public timeline', async () => {
     setup();

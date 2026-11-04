@@ -4,6 +4,7 @@ import {
   AuthError, ConflictError, GitHubApiError, NetworkError, PermissionError, RateLimitError,
 } from '../../../src/admin/lib/errors';
 import { SITE } from '../../../src/config/site';
+import { FakeGitHub, GOOD_TOKEN, gitBlobSha } from '../../e2e/fixtures/fakeGitHub';
 
 const TOKEN = 'github_pat_TEST';
 const R = '/repos/estheralmendros/portfolio';
@@ -187,6 +188,54 @@ describe('commitFiles: lost PATCH response (step 5′)', () => {
       [`PATCH ${R}/git/refs/heads/main`]: () => lost,
     }));
     await expect(h.client.commitFiles(args())).rejects.toBeInstanceOf(NetworkError);
+  });
+});
+
+describe('commitFiles: lost PATCH response, then someone pushed on top (FakeGitHub)', () => {
+  const REF = `${R}/git/ref/heads/main`;
+  const PATCH_REF = `${R}/git/refs/heads/`;
+  const content = '[]\n';
+
+  async function setup() {
+    const gh = new FakeGitHub();
+    const client = createGitHubClient({ token: GOOD_TOKEN, fetch: gh.fetch });
+    const { sha } = await client.getFile(JSON_PATH);
+    const save = () => client.commitFiles({ files: [{ path: JSON_PATH, content, encoding: 'utf-8' }, imgFile], message: 'm', expectedShas: { [JSON_PATH]: sha } });
+    /** An unrelated commit lands right after the (lost) PATCH, before the admin re-reads the ref. */
+    const pushAfterPatch = (alsoAfterPatch = () => {}) =>
+      gh.before('PATCH', PATCH_REF, () => {
+        gh.before('GET', REF, () => gh.pushCommit({ 'README.md': 'other\n' }));
+        alsoAfterPatch();
+      });
+    return { gh, client, save, pushAfterPatch };
+  }
+
+  it('our commit landed under the new head → success with our commit SHA', async () => {
+    const { gh, save, pushAfterPatch } = await setup();
+    gh.losePatchResponse(true);
+    pushAfterPatch();
+    const res = await save();
+    expect(gh.headSha).not.toBe(res.commitSha);
+    expect(gh.commitAt(gh.headSha)?.parents).toEqual([res.commitSha]);
+    expect(res.blobShas[JSON_PATH]).toBe(gitBlobSha(Buffer.from(content)));
+    expect(gh.refUpdates()).toHaveLength(1);
+  });
+
+  it('our commit did not land (head moved anyway) → NetworkError, nothing published', async () => {
+    const { gh, save, pushAfterPatch } = await setup();
+    const before = gh.files.get(JSON_PATH)!.content;
+    gh.losePatchResponse(false);
+    pushAfterPatch();
+    await expect(save()).rejects.toBeInstanceOf(NetworkError);
+    expect(gh.files.get(JSON_PATH)!.content).toBe(before);
+    expect(gh.files.has(IMG_PATH)).toBe(false);
+  });
+
+  it('the landing check itself failing → NetworkError', async () => {
+    const { gh, save, pushAfterPatch } = await setup();
+    gh.losePatchResponse(true);
+    pushAfterPatch(() => gh.loseResponse('GET', `${R}/contents/`, false, 5));
+    await expect(save()).rejects.toBeInstanceOf(NetworkError);
   });
 });
 

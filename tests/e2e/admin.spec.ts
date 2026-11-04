@@ -1,28 +1,19 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { login, loggedIn, trackExternalRequests } from './fixtures/admin';
 import { FakeGitHub, GOOD_TOKEN } from './fixtures/fakeGitHub';
 
 let gh: FakeGitHub;
+let external: string[];
 
 test.beforeEach(async ({ page }) => {
   gh = new FakeGitHub();
   await gh.install(page);
+  external = trackExternalRequests(page);
 });
 
 test.afterEach(() => {
-  // Defensive: every GitHub request in these tests was served by the fake.
-  expect(gh.requests.every((r) => r.path.startsWith('/'))).toBe(true);
+  expect(external).toEqual([]);
 });
-
-async function login(page: Page, token = GOOD_TOKEN) {
-  await page.goto('admin/');
-  await page.getByLabel('GitHub fine-grained token').fill(token);
-  await page.getByRole('button', { name: 'Log in' }).click();
-}
-
-async function loggedIn(page: Page) {
-  await login(page);
-  await expect(page.getByText('Fixture Alpha')).toBeVisible();
-}
 
 test.describe('login', () => {
   test('success stores the token only in sessionStorage', async ({ page, context }) => {

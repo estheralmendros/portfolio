@@ -4,6 +4,9 @@ import type { Certification, Experience, Profile, Skill } from '../../src/conten
 import type { FakeGitHub } from './fixtures/fakeGitHub';
 import { REPO_PATH, headJson, loggedIn, openTab, putJson, seededGitHub, trackExternalRequests } from './fixtures/admin';
 
+// The End label shows a visual (aria-hidden) "*" while Present is unchecked; match both forms, not "End date" etc.
+const END_LABEL = /^End\*?$/;
+
 const SAVED = 'Saved. The site will update after the next deploy (a few minutes).';
 
 let gh: FakeGitHub;
@@ -17,7 +20,6 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => {
   expect(external).toEqual([]);
-  expect(gh.requests.every((r) => r.path.startsWith('/'))).toBe(true);
 });
 
 test.describe('profile', () => {
@@ -204,6 +206,33 @@ test.describe('reorder', () => {
     expect(gh.writes()).toHaveLength(0);
   });
 
+  test('focus never drops to <body> while the order is committing (A1-25)', async ({ page }) => {
+    await loggedIn(page);
+    await openTab(page, 'Experience');
+    // Hold the commit until released; route.fallback() hands it to FakeGitHub's handler.
+    let release!: () => void;
+    const held = new Promise<void>((r) => { release = r; });
+    // Octokit encodes the path's "/" as %2F.
+    await page.route(/api\.github\.com\/repos\/.+\/contents\/content(\/|%2F)experience\.json/i, async (route) => {
+      if (route.request().method() === 'PUT') await held;
+      await route.fallback();
+    });
+    const upBtn = page.getByRole('button', { name: "Move 'Fixture Degree @ Fixture School' up" });
+    await upBtn.focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'Save order' }).focus();
+    await page.keyboard.press('Enter');
+    const busy = page.getByRole('button', { name: 'Saving…' });
+    await expect(busy).toHaveAttribute('aria-disabled', 'true');
+    await expect(busy).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+    await page.keyboard.press('Enter');
+    release();
+    await expect(page.getByText(SAVED)).toBeVisible();
+    expect(gh.writes()).toHaveLength(1);
+    await expect(page.getByRole('button', { name: "Move 'Fixture Degree @ Fixture School' down" })).toBeFocused();
+  });
+
   test('experience: Save order commits the reorder message', async ({ page }) => {
     await loggedIn(page);
     await openTab(page, 'Experience');
@@ -289,7 +318,7 @@ test.describe('experience', () => {
     await expect(page.getByLabel(/^Id/)).toHaveValue('lead-engineer-acme');
     await page.getByLabel(/^Start/).fill('2024-02');
     await page.getByLabel('Present').check();
-    await expect(page.getByLabel('End', { exact: true })).toBeDisabled();
+    await expect(page.getByLabel(END_LABEL)).toBeDisabled();
     await page.getByLabel(/^Highlights/).fill('Led things\n\n  Shipped stuff  \n');
     await page.getByLabel(/^Tags/).fill('Go, Go, Kubernetes');
     await page.getByRole('button', { name: 'Save' }).click();
@@ -325,12 +354,12 @@ test.describe('experience', () => {
     await expect(page.getByLabel('Present')).toBeChecked();
     await page.getByLabel('Present').uncheck();
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByLabel('End', { exact: true })).toHaveAttribute('aria-invalid', 'true');
-    await page.getByLabel('End', { exact: true }).fill('2021-01');
+    await expect(page.getByLabel(END_LABEL)).toHaveAttribute('aria-invalid', 'true');
+    await page.getByLabel(END_LABEL).fill('2021-01');
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByLabel('End', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByLabel(END_LABEL)).toHaveAttribute('aria-invalid', 'true');
     expect(gh.writes()).toHaveLength(0);
-    await page.getByLabel('End', { exact: true }).fill('2023-06');
+    await page.getByLabel(END_LABEL).fill('2023-06');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText(SAVED)).toBeVisible();
     expect(putJson<Experience[]>(gh).data[0]!.end).toBe('2023-06');

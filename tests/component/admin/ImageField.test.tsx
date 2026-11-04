@@ -6,6 +6,7 @@ import { ImageField } from '../../../src/admin/components/ImageField';
 import { LastCommitContext } from '../../../src/admin/adminContext';
 import { ImageError } from '../../../src/admin/lib/errors';
 import type { ImageKind, PendingUpload, ProcessedImage } from '../../../src/admin/lib/imageProcessing';
+import { stubObjectUrls } from '../fixtures';
 
 let urls = 0;
 const created: string[] = [];
@@ -15,13 +16,12 @@ beforeEach(() => {
   urls = 0;
   created.length = 0;
   revoked.length = 0;
-  URL.createObjectURL = vi.fn(() => {
+  stubObjectUrls(() => {
     urls += 1;
     const u = `blob:http://localhost/img-${urls}`;
     created.push(u);
     return u;
-  });
-  URL.revokeObjectURL = vi.fn((u: string) => {
+  }).revokeObjectURL.mockImplementation((u: string) => {
     revoked.push(u);
   });
 });

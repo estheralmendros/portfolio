@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { ProfileForm } from '../../../src/admin/components/ProfileForm';
 import { ConflictError } from '../../../src/admin/lib/errors';
 import { profile } from './fakeClient';
+import { previewPane, stubObjectUrls } from '../fixtures';
 import type { Profile } from '../../../src/content/schema';
 import type { SaveExtras } from '../../../src/admin/components/formKit';
 import type { ProcessedImage } from '../../../src/admin/lib/imageProcessing';
@@ -140,8 +141,7 @@ describe('ProfileForm', () => {
 
 describe('ProfileForm (photo + CV uploads, prd2 Features 3 and 4)', () => {
   beforeEach(() => {
-    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/photo');
-    URL.revokeObjectURL = vi.fn();
+    stubObjectUrls(() => 'blob:http://localhost/photo');
   });
   const processImage = vi.fn(async (): Promise<ProcessedImage> => ({
     blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/webp' }), ext: 'webp', width: 400, height: 400,
@@ -231,7 +231,6 @@ describe('ProfileForm (photo + CV uploads, prd2 Features 3 and 4)', () => {
 });
 
 describe('ProfileForm (preview, prd2 Feature 5)', () => {
-  const previewPane = () => screen.getByLabelText('Preview', { selector: '[inert]' });
 
   it('renders HeroSection + ContactSection with the same markup as the public site', async () => {
     setup();
@@ -249,5 +248,26 @@ describe('ProfileForm (preview, prd2 Feature 5)', () => {
     await userEvent.clear(screen.getByLabelText(/^Name/));
     await waitFor(() => expect(within(previewPane()).getByRole('heading', { level: 1 })).toHaveTextContent('—'));
     expect(screen.getByText('Fix errors to save')).toBeInTheDocument();
+  });
+
+  it('an invalid LinkedIn/GitHub URL shows no link for it in the preview until a valid https:// URL is entered (A1-31)', async () => {
+    setup();
+    const socialLinks = (label: string) =>
+      Array.from(previewPane().querySelectorAll('a')).filter((a) => a.textContent?.includes(label));
+    expect(socialLinks('LinkedIn')).toHaveLength(2);
+
+    await userEvent.clear(screen.getByLabelText(/^LinkedIn URL/));
+    await userEvent.type(screen.getByLabelText(/^LinkedIn URL/), 'javascript:alert(1)');
+    await userEvent.clear(screen.getByLabelText(/^GitHub URL/));
+    await waitFor(() => expect(screen.getByText('Fix errors to save')).toBeInTheDocument());
+    await waitFor(() => expect(socialLinks('LinkedIn')).toEqual([]));
+    expect(socialLinks('GitHub')).toEqual([]);
+    expect(previewPane().querySelectorAll('a:not([href]), a[href=""]')).toHaveLength(0);
+
+    await userEvent.clear(screen.getByLabelText(/^LinkedIn URL/));
+    await userEvent.type(screen.getByLabelText(/^LinkedIn URL/), 'https://www.linkedin.com/in/ada2');
+    await waitFor(() => expect(socialLinks('LinkedIn')).toHaveLength(2));
+    for (const a of socialLinks('LinkedIn')) expect(a).toHaveAttribute('href', 'https://www.linkedin.com/in/ada2');
+    expect(socialLinks('GitHub')).toEqual([]);
   });
 });

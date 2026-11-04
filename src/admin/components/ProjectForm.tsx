@@ -1,20 +1,17 @@
-import { useMemo, useRef, useState, type SubmitEvent } from 'react';
+import { type SubmitEvent, useMemo } from 'react';
 import { ProjectSchema, type Project } from '../../content/schema';
 import { ProjectCard } from '../../components/ProjectCard';
 import { ProjectDetail } from '../../components/ProjectDetail';
-import { hasDetailPage } from '../../components/ProjectsSection';
 import { renderMarkdown } from '../../lib/markdown';
-import { slugify } from '../../lib/slugify';
-import { buildUploadPath } from '../../lib/uploads';
-import { useLastCommitSha } from '../adminContext';
+import { withBase } from '../../lib/paths';
+import { hasDetailPage } from '../../lib/projects';
 import { emptyToUndefined, issuesToFieldErrors, parseTags } from '../lib/formUtils';
-import { checkTypedImageRef, finalizeUpload, type PendingUpload } from '../lib/imageProcessing';
-import { resolvePreviewImage } from '../lib/previewImage';
-import { IMAGE_NOT_UPLOADED } from '../messages';
+import type { PendingUpload } from '../lib/imageProcessing';
+import { SLUG_LOCKED_HINT, slugHint } from '../messages';
 import { httpsOrUndefined, monthOrPlaceholder, opt, orPlaceholder } from '../previewValues';
 import {
-  Field, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, differs, focusFirstError, useDirtyReport, useSaveRunner,
-  type FieldErrors, type SaveExtras,
+  Field, FormActions, FormLayout, IdField, REQUIRED_MESSAGE, SaveBanners, duplicateIdError, imageRef, isSavable, useAutoId, useEntryForm,
+  useImageUpload, type Checked, type FieldErrors, type SaveExtras,
 } from './formKit';
 import { ImageField, type ProcessFn } from './ImageField';
 import { PreviewPane } from './PreviewPane';
@@ -46,7 +43,7 @@ function toRaw(v: Values, upload: PendingUpload | null) {
     summary: v.summary,
     description: v.description,
     tags: parseTags(v.tags),
-    image: upload ? buildUploadPath('projects', v.id.trim(), upload.image.ext, upload.shortId) : v.image.trim(),
+    image: imageRef('projects', v.image, v.id.trim(), upload),
     imageAlt: v.imageAlt,
     repoUrl: v.repoUrl.trim(),
     demoUrl: v.demoUrl.trim(),
@@ -103,63 +100,43 @@ export function ProjectForm({
   /** Injectable image processing (tests; the real one needs a canvas). */
   processImage?: ProcessFn;
 }) {
-  const [loaded] = useState<Values>(() => toValues(initial));
-  const [values, setValues] = useState<Values>(loaded);
-  const [upload, setUpload] = useState<PendingUpload | null>(null);
-  const [slugTouched, setSlugTouched] = useState(mode === 'edit');
-  const [errors, setErrors] = useState<FieldErrors<FieldName>>({});
-  const { saving, conflict, saveError, run } = useSaveRunner();
-  const formRef = useRef<HTMLFormElement>(null);
-  const commitRef = useLastCommitSha();
-  useDirtyReport(differs(values, loaded) || upload !== null, onDirtyChange);
+  const image = useImageUpload('projects', initial?.image);
+  const { upload } = image;
+  const form = useEntryForm({
+    initialValues: () => toValues(initial),
+    order: FIELD_ORDER,
+    extraDirty: upload !== null,
+    busy: image.busy,
+    onDirtyChange,
+  });
+  const { values, errors, saving, conflict, saveError, formError, formRef } = form;
+  const autoId = useAutoId<Values>(mode === 'edit', ['title'], (v) => v.title);
+  const set = <K extends keyof Values>(key: K, value: Values[K]) => form.set(key, value, autoId.derive);
 
-  const set = <K extends keyof Values>(key: K, value: Values[K]) =>
-    setValues((v) => {
-      const next = { ...v, [key]: value };
-      if (key === 'title' && !slugTouched) next.id = slugify(String(value));
-      return next;
-    });
-
-  /** The id/title errors cover an upload path built from a bad id; a typed `src/` path is blocked (step 5b). */
-  const imageErrors = (fieldErrors: FieldErrors<FieldName>) => {
-    if (upload) {
-      delete fieldErrors.image;
-      return;
-    }
-    const typed = checkTypedImageRef(values.image, initial?.image);
-    if (typed) fieldErrors.image = typed;
-  };
-
-  const validate = (): Project | null => {
+  /** One check for Save and the preview (review S1): schema, required fields, image rules, duplicate slug. */
+  const check = (): Checked<FieldName, Project> => {
     const result = ProjectSchema.safeParse(toRaw(values, upload));
     const fieldErrors: FieldErrors<FieldName> = result.success ? {} : (issuesToFieldErrors(result.error.issues) as FieldErrors<FieldName>);
     for (const f of REQUIRED) if (String(values[f]).trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
-    imageErrors(fieldErrors);
+    image.checkErrors(fieldErrors, 'image', values.image);
     if (mode === 'create' && !fieldErrors.id) {
-      const dup = existing.find((p) => p.id === values.id.trim());
-      if (dup) fieldErrors.id = `This slug is already used by '${dup.title}'`;
+      const dup = duplicateIdError(existing, values.id.trim(), (p) => p.title, 'slug');
+      if (dup) fieldErrors.id = dup;
     }
-    setErrors(fieldErrors);
-    if (focusFirstError(formRef, FIELD_ORDER, fieldErrors)) return null;
-    return result.success ? result.data : null;
+    return { errors: fieldErrors, data: result.success ? result.data : null };
   };
+  const checked = check();
 
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (saving || conflict) return;
-    const project = validate();
-    if (!project) return;
-    const pending = upload;
-    void run(async () => {
-      if (!pending) return onSave(project);
+  const submit = (e: SubmitEvent<HTMLFormElement>) =>
+    form.submit(e, check, async (project) => {
       // Save-time path from the final id (Feature 3 step 5a); the validated entry already holds the same path.
-      const { path, file } = await finalizeUpload('projects', project.id, pending);
-      await onSave({ ...project, image: path }, { files: [file], attachments: ['image'] });
+      const file = await image.finalize(project.id);
+      if (!file) return onSave(project);
+      await onSave({ ...project, image: file.path }, { files: [file.file], attachments: ['image'] });
     });
-  };
 
   const snapshot = useMemo(() => ({ values, upload }), [values, upload]);
-  const previewValid = ProjectSchema.safeParse(toRaw(values, upload)).success && (upload !== null || !checkTypedImageRef(values.image, initial?.image));
+  const previewValid = isSavable(checked);
 
   const text = (name: FieldName & keyof Values, label: string, hint?: string, type = 'text') => (
     <Field name={name} label={label} required={REQUIRED.includes(name)} error={errors[name]} hint={hint}>
@@ -173,14 +150,14 @@ export function ProjectForm({
       valid={previewValid}
       render={({ values: v, upload: up }) => {
         const p = previewProject(v, up);
-        const image = resolvePreviewImage(up ? undefined : v.image, { objectUrl: up?.objectUrl, commitRef });
+        const img = image.previewImage(v.image, up);
         const detail = hasDetailPage(p);
         return (
           <>
-            <ProjectCard project={p} image={image} hasDetail={detail} />
+            <ProjectCard project={p} image={img} hasDetail={detail} />
             {detail && (
               <div className="mt-6 border-t border-line">
-                <ProjectDetail project={p} image={image} html={renderMarkdown(p.description)} />
+                <ProjectDetail project={p} image={img} html={renderMarkdown(p.description)} />
               </div>
             )}
           </>
@@ -191,29 +168,21 @@ export function ProjectForm({
 
   return (
     <FormLayout aside={preview}>
-      <SaveBanners conflict={conflict} saveError={saveError} onReload={onReload} conflictNotes={upload ? [IMAGE_NOT_UPLOADED] : []} />
+      <SaveBanners conflict={conflict} saveError={saveError} formError={formError} onReload={onReload} conflictNotes={image.conflictNotes} />
       <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-4">
         {text('title', 'Title')}
-        <Field
-          name="id"
+        <IdField
+          mode={mode}
           label="Slug"
-          required
+          value={values.id}
           error={errors.id}
-          hint={mode === 'edit' ? 'The slug is the page URL and cannot change.' : 'Used in the URL: /portfolio/projects/<slug>/'}
-        >
-          {(c) => (
-            <input
-              {...c}
-              type="text"
-              value={values.id}
-              readOnly={mode === 'edit'}
-              onChange={(e) => {
-                setSlugTouched(true);
-                set('id', e.target.value);
-              }}
-            />
-          )}
-        </Field>
+          lockedHint={SLUG_LOCKED_HINT}
+          createHint={slugHint(withBase('/projects/<slug>/'))}
+          onChange={(v) => {
+            autoId.touch();
+            set('id', v);
+          }}
+        />
         {text('summary', 'Summary')}
         <Field name="description" label="Description" error={errors.description} hint="Markdown. Leave empty for no detail page.">
           {(c) => <textarea {...c} rows={8} value={values.description} onChange={(e) => set('description', e.target.value)} />}
@@ -226,8 +195,7 @@ export function ProjectForm({
           alt={values.imageAlt}
           value={values.image}
           onValueChange={(v) => set('image', v)}
-          pending={upload}
-          onPendingChange={setUpload}
+          {...image.fieldProps}
           onRemove={() => set('imageAlt', '')}
           error={errors.image}
           process={processImage}
@@ -246,7 +214,7 @@ export function ProjectForm({
             </Field>
           </div>
         </div>
-        <FormActions saving={saving} conflict={conflict} onCancel={onCancel} />
+        <FormActions saving={saving} conflict={conflict} busy={image.busy} onCancel={onCancel} />
       </form>
     </FormLayout>
   );

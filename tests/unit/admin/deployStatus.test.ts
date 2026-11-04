@@ -14,7 +14,7 @@ describe('mapRunToState', () => {
     ...(['requested', 'queued', 'in_progress', 'waiting', 'pending'] as const).map((s) => [run(s), { kind: 'deploying' }] as const),
     [run('completed', 'success'), { kind: 'live' }],
     ...['failure', 'timed_out', 'startup_failure', 'action_required'].map((c) => [run('completed', c), { kind: 'failed', runUrl: URL_ }] as const),
-    ...['cancelled', 'skipped'].map((c) => [run('completed', c), { kind: 'superseded', runUrl: URL_ }] as const),
+    ...['cancelled', 'skipped'].map((c) => [run('completed', c), { kind: 'superseded' }] as const),
     ...['neutral', 'stale', 'something-new', null].map((c) => [run('completed', c), { kind: 'unknown', reason: 'unexpected' }] as const),
   ] as [WorkflowRun | null, DeployState][])('%j → %j', (input, expected) => expect(mapRunToState(input)).toEqual(expected));
 });
@@ -65,7 +65,7 @@ describe('pollDeployStatus', () => {
   it.each([
     ['success', { kind: 'live' }],
     ['failure', { kind: 'failed', runUrl: URL_ }],
-    ['cancelled', { kind: 'superseded', runUrl: URL_ }],
+    ['cancelled', { kind: 'superseded' }],
     ['neutral', { kind: 'unknown', reason: 'unexpected' }],
   ] as const)('stops on completed/%s', async (conclusion, expected) => {
     const p = start((t) => (t < 20_000 ? run('in_progress', null, iso(0)) : run('completed', conclusion, iso(0))));

@@ -63,6 +63,10 @@ export function AdminApp({
     setDirtyState(d);
   }, []);
   const [route, navigate] = useHashRoute({ isDirty: () => dirtyRef.current });
+  const routeRef = useRef(route);
+  useEffect(() => {
+    routeRef.current = route;
+  }, [route]);
   useBeforeUnload(dirty);
 
   const [phase, setPhase] = useState<Phase>(() => (getToken() ? { name: 'checking' } : { name: 'login', message: null, busy: false }));
@@ -75,14 +79,27 @@ export function AdminApp({
   const clientRef = useRef<GitHubClient | null>(null);
   const requested = useRef<Route>(route);
   const loadsStarted = useRef(new Set<CollectionName>());
+  /** Bumped on logout: async results captured under an older value belong to a finished session and are dropped. */
   const session = useRef(0);
+  /**
+   * False once unmounted. A ref rather than a session bump in the cleanup: StrictMode's mount → cleanup → mount
+   * would otherwise orphan the clients created during the first mount.
+   */
+  const mounted = useRef(true);
+  const isCurrent = useCallback((mine: number) => mounted.current && mine === session.current, []);
   const deployCtl = useRef<AbortController | null>(null);
 
   const stopDeploy = useCallback(() => {
     deployCtl.current?.abort();
     deployCtl.current = null;
   }, []);
-  useEffect(() => stopDeploy, [stopDeploy]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      stopDeploy();
+    };
+  }, [stopDeploy]);
 
   const logout = useCallback(
     (message: string | null = null) => {
@@ -96,14 +113,24 @@ export function AdminApp({
       setStore({});
       setStatus(null);
       setPendingDelete(null);
+      setDeleting(false);
       setPhase({ name: 'login', message, busy: false });
     },
     [stopDeploy],
   );
 
+  /** A 401 logs out only the session that created the client (a late 401 from an old client is ignored). */
   const makeClient = useCallback(
-    (token: string) => createClient({ token, onAuthError: () => logout(SESSION_EXPIRED) }),
-    [createClient, logout],
+    (token: string) => {
+      const mine = session.current;
+      return createClient({
+        token,
+        onAuthError: () => {
+          if (isCurrent(mine)) logout(SESSION_EXPIRED);
+        },
+      });
+    },
+    [createClient, isCurrent, logout],
   );
 
   const load = useCallback(async (name: CollectionName) => {
@@ -195,19 +222,25 @@ export function AdminApp({
   /**
    * The single save path: one commit for one content file, guarded by the SHA this tab loaded (or last saved).
    * With extra files (uploads, CV delete) the JSON and the files go in one Git Data commit (prd2 Feature 3.6).
+   * Resolves false (and touches no state) when the session ended or the app unmounted while it was in flight.
    */
-  const commit = async <K extends CollectionName>(name: K, data: CollectionData<K>, message: string, extras?: SaveExtras) => {
+  const commit = async <K extends CollectionName>(name: K, data: CollectionData<K>, message: string, extras?: SaveExtras): Promise<boolean> => {
     const client = clientRef.current;
     const entry = store[name];
     if (!client || entry?.status !== 'ready') throw new Error('Not ready');
+    const mine = session.current;
     const res = await saveCollectionWithFiles(client, name, data, entry.sha, message, extras?.files ?? []);
-    setStore((s) => ({ ...s, [name]: { status: 'ready', data, sha: res.sha } }));
+    if (!isCurrent(mine)) return false;
+    setStore((s) => ({ ...s, [name]: { status: 'ready', data: res.data, sha: res.sha } }));
     setLastCommitSha(res.commitSha);
     startDeploy(client, res.commitSha);
     setStatus({ section: name, kind: 'success', text: savedMessage(extras?.attachments) });
+    return true;
   };
 
-  const reportError = (section: NavSection, e: unknown) => {
+  /** Shows a save failure, unless it belongs to a session that has since ended (`mine` captured before the await). */
+  const reportError = (section: NavSection, e: unknown, mine: number) => {
+    if (!isCurrent(mine)) return;
     const err = toAppError(e);
     const text = saveFailureMessage(err);
     if (text !== null) setStatus({ section, kind: 'error', text, conflict: err instanceof ConflictError });
@@ -224,15 +257,19 @@ export function AdminApp({
     const { section, entry } = pendingDelete;
     const loaded = store[section];
     if (loaded?.status !== 'ready') return;
+    const mine = session.current;
     setDeleting(true);
     try {
       const next = removeEntry(loaded.data as { id: string }[], entry.id);
       await commit(section, next as CollectionData<typeof section>, commitMessage(section, 'delete', entryLabel(section, entry)));
     } catch (e) {
-      reportError(section, e);
+      reportError(section, e, mine);
     } finally {
-      setPendingDelete(null);
-      setDeleting(false);
+      // logout already reset these; a new session's dialog must not be closed by an old delete.
+      if (isCurrent(mine)) {
+        setPendingDelete(null);
+        setDeleting(false);
+      }
     }
   };
 
@@ -303,10 +340,11 @@ export function AdminApp({
     },
     onSaveOrder: async (ordered) => {
       setStatus(null);
+      const mine = session.current;
       try {
         await commit(section, ordered as CollectionData<S>, commitMessage(section, 'reorder'));
       } catch (e) {
-        reportError(section, e);
+        reportError(section, e, mine);
         throw e;
       }
     },
@@ -340,8 +378,10 @@ export function AdminApp({
       const next =
         mode === 'edit' ? updateEntry(list, entry.id, entry) : s === 'skills' ? insertSkill(list as Skill[], entry as Skill) : addEntry(list, entry);
       const message = commitMessage(s, mode === 'edit' ? 'update' : 'add', entryLabel(s, entry), extras?.attachments);
-      await commit(s, next as CollectionData<S>, message, extras);
-      navigate({ name: 'list', section: s });
+      const formRoute = routeRef.current;
+      const applied = await commit(s, next as CollectionData<S>, message, extras);
+      // Back to the list only if the user is still on this form (they may have left while it was saving).
+      if (applied && routeRef.current === formRoute) navigate({ name: 'list', section: s });
     };
     switch (section) {
       case 'projects': {
@@ -392,7 +432,9 @@ export function AdminApp({
             onDirtyChange={setDirty}
             onReload={() => void reload('profile')}
             processImage={processImage}
-            onSave={(p: Profile, x?: SaveExtras) => commit('profile', p, commitMessage('profile', 'update', undefined, x?.attachments), x)}
+            onSave={async (p: Profile, x?: SaveExtras) => {
+              await commit('profile', p, commitMessage('profile', 'update', undefined, x?.attachments), x);
+            }}
           />
         )}
       </div>
@@ -465,6 +507,7 @@ export function AdminApp({
           busy={deleting}
           onConfirm={() => void confirmDelete()}
           onCancel={() => setPendingDelete(null)}
+          fallbackFocus={() => document.querySelector<HTMLElement>('[data-new-entry]')}
         />
       )}
     </LastCommitContext.Provider>

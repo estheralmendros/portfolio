@@ -1,12 +1,6 @@
-import type { Skill, SkillCategory } from '../content/schema';
+import type { Skill } from '../content/schema';
+import { SKILL_GROUPS } from '../lib/skills';
 import { SkillChip } from './SkillChip';
-
-const GROUPS: { category: SkillCategory; label: string }[] = [
-  { category: 'languages', label: 'Languages' },
-  { category: 'frameworks', label: 'Frameworks' },
-  { category: 'cloud', label: 'Cloud' },
-  { category: 'tools', label: 'Tools' },
-];
 
 export function SkillsSection({ skills, icons }: { skills: Skill[]; icons: Record<string, { path: string; title: string } | null> }) {
   if (skills.length === 0) return null;
@@ -16,7 +10,7 @@ export function SkillsSection({ skills, icons }: { skills: Skill[]; icons: Recor
         Stack
       </h2>
       <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {GROUPS.map(({ category, label }) => {
+        {SKILL_GROUPS.map(({ category, label }) => {
           const group = skills.filter((s) => s.category === category);
           if (group.length === 0) return null;
           return (

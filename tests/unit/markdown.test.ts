@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSafeUrl, renderMarkdown, sanitizeUrl } from '../../src/lib/markdown';
+import { renderMarkdown, sanitizeUrl } from '../../src/lib/markdown';
 
 describe('renderMarkdown basics', () => {
   it('renders headings and lists', () => {
@@ -88,6 +88,10 @@ describe('sanitizeUrl', () => {
     ['#f', 'link', '#f'],
     ['./x', 'link', './x'],
     ['//a.com', 'link', null],
+    ['\\\\evil.com', 'link', null],
+    ['\\/evil.com', 'link', null],
+    ['/\\evil.com', 'link', null],
+    ['&bsol;&bsol;evil.com', 'link', null],
     ['javascript:x', 'link', null],
     ['\u0000javascript:x', 'link', null],
     ['java\nscript:x', 'link', null],
@@ -97,11 +101,10 @@ describe('sanitizeUrl', () => {
     ['https://a.com/i.png', 'image', 'https://a.com/i.png'],
     ['/i.png', 'image', '/portfolio/i.png'],
     ['//a.com/i.png', 'image', null],
+    ['\\\\evil.com/i.png', 'image', null],
+    ['\\/evil.com/i.png', 'image', null],
+    ['/\\evil.com/i.png', 'image', null],
     ['i.png', 'image', null],
     ['mailto:a@b.co', 'image', null],
   ] as const)('%j (%s) -> %j', (url, kind, out) => expect(sanitizeUrl(url, kind)).toBe(out));
-  it('isSafeUrl mirrors sanitizeUrl', () => {
-    expect(isSafeUrl('https://a.com', 'link')).toBe(true);
-    expect(isSafeUrl('javascript:x', 'link')).toBe(false);
-  });
 });

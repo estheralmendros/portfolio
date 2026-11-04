@@ -102,6 +102,12 @@ describe('ProjectCard', () => {
     expect(screen.getByRole('link', { name: /Demo/ })).toHaveAttribute('href', 'https://example.com/alpha');
     expect(screen.getByRole('link', { name: /Read more/ })).toHaveAttribute('href', '/portfolio/projects/fixture-alpha/');
   });
+  it('Repo/Demo names say which project and hide the decorative arrow', () => {
+    render(<ProjectCard project={alpha} hasDetail={false} />);
+    const repo = screen.getByRole('link', { name: 'Repo for Fixture Alpha (opens in new tab)' });
+    const demo = screen.getByRole('link', { name: 'Demo for Fixture Alpha (opens in new tab)' });
+    for (const link of [repo, demo]) expect(within(link).getByText('↗')).toHaveAttribute('aria-hidden', 'true');
+  });
   it('omits image, links and Read more when absent', () => {
     const { container } = render(<ProjectCard project={gamma} hasDetail={false} />);
     expect(container.querySelector('img')).toBeNull();
@@ -274,6 +280,13 @@ describe('ContactSection and Tag', () => {
     expect(screen.getByRole('link', { name: /LinkedIn/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /GitHub/ })).toBeInTheDocument();
     expect(container.querySelector('form')).toBeNull();
+  });
+  it('hides the decorative arrow from the LinkedIn/GitHub link names', () => {
+    render(<ContactSection socials={fixture.profile.socials} />);
+    for (const name of ['LinkedIn', 'GitHub']) {
+      const link = screen.getByRole('link', { name: `${name} (opens in new tab)` });
+      expect(within(link).getByText('↗')).toHaveAttribute('aria-hidden', 'true');
+    }
   });
   it('Tag and TagList', () => {
     render(<TagList tags={['A', 'B']} />);

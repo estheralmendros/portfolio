@@ -4,7 +4,7 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "types": ["node", "vitest/globals"],
+    "types": ["node"],
     "paths": { "@content/*": ["./content/*"] }
   },
   "include": [".astro/types.d.ts", "src", "tests", "*.config.ts"],

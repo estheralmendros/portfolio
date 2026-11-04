@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ProjectForm } from '../../../src/admin/components/ProjectForm';
 import { ConflictError, GitHubApiError, NetworkError, PermissionError, RateLimitError } from '../../../src/admin/lib/errors';
 import { project } from './fakeClient';
+import { previewPane, stubObjectUrls } from '../fixtures';
 import { ProjectCard } from '../../../src/components/ProjectCard';
 import type { SaveExtras } from '../../../src/admin/components/formKit';
 import type { ProcessedImage } from '../../../src/admin/lib/imageProcessing';
@@ -80,11 +81,16 @@ describe('ProjectForm (create)', () => {
     setup({ onSave });
     await fillValid();
     const btn = screen.getByRole('button', { name: 'Save' });
-    await userEvent.click(btn);
+    // Two clicks in the same tick, before React re-renders the disabled button: only the re-entry guard stops the second.
+    act(() => {
+      btn.click();
+      btn.click();
+    });
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Saving…' }));
     expect(onSave).toHaveBeenCalledTimes(1);
-    resolve();
+    await act(async () => resolve());
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
   it('conflict shows the blocking banner, keeps Save disabled, Reload calls onReload', async () => {
@@ -180,12 +186,11 @@ describe('ProjectForm (image upload, prd2 Feature 3)', () => {
   const blobUrls: string[] = [];
   beforeEach(() => {
     blobUrls.length = 0;
-    URL.createObjectURL = vi.fn(() => {
+    stubObjectUrls(() => {
       const u = `blob:http://localhost/p-${blobUrls.length + 1}`;
       blobUrls.push(u);
       return u;
     });
-    URL.revokeObjectURL = vi.fn();
   });
 
   const processImage = vi.fn(async (): Promise<ProcessedImage> => ({
@@ -284,7 +289,6 @@ describe('ProjectForm (image upload, prd2 Feature 3)', () => {
 });
 
 describe('ProjectForm (preview, prd2 Feature 5)', () => {
-  const previewPane = () => screen.getByLabelText('Preview', { selector: '[inert]' });
 
   it('reflects unsaved typing with the same markup as the public ProjectCard', async () => {
     setup();
@@ -315,8 +319,7 @@ describe('ProjectForm (preview, prd2 Feature 5)', () => {
   });
 
   it('a newly selected image shows in the preview through its blob: URL', async () => {
-    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/new');
-    URL.revokeObjectURL = vi.fn();
+    stubObjectUrls(() => 'blob:http://localhost/new');
     const processImage = vi.fn(async (): Promise<ProcessedImage> => ({ blob: new Blob([new Uint8Array(1)], { type: 'image/png' }), ext: 'png', width: 1, height: 1 }));
     setup({ processImage });
     await fillValid();

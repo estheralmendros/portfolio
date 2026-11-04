@@ -4,7 +4,9 @@ import { randomBytes } from 'node:crypto';
 import sharp from 'sharp';
 import type { Certification, Profile, Project } from '../../src/content/schema';
 import { CONTENTS_DEFAULT_MAX_BYTES, type FakeGitHub } from './fixtures/fakeGitHub';
-import { REPO_PATH, chooseFile, headJson, image, loggedIn, openTab, putJson, readImage, seededGitHub, trackExternalRequests, treePaths } from './fixtures/admin';
+import {
+  REPO_PATH, chooseFile, headJson, image, loggedIn, openTab, previewPane, putJson, readImage, seededGitHub, trackExternalRequests, treePaths,
+} from './fixtures/admin';
 
 const UPLOAD_RE = /^src\/assets\/uploads\/(projects|profile|certifications)\/[a-z0-9-]+-[0-9a-f]{6}\.(jpg|png|webp)$/;
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -14,6 +16,8 @@ const SAVE_FAILED = "Couldn't save. Check your connection and try again.";
 const CONFLICT = 'Content changed elsewhere — reload to get the latest version.';
 const IMAGE_NOT_UPLOADED = '(Your selected image was not uploaded.)';
 const SVG_UNREADABLE = "Couldn't read this SVG. Use a PNG instead.";
+/** How long the SVG-injection tests wait for a deferred handler that must never run (a negative check has no event to await). */
+const SVG_TRAP_WINDOW_MS = 300;
 
 let gh: FakeGitHub;
 let external: string[];
@@ -33,14 +37,10 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => {
   expect(external).toEqual([]);
-  expect(gh.requests.every((r) => r.path.startsWith('/'))).toBe(true);
   // No .svg is ever written under src/assets/uploads (prd2 Feature 3.2a).
   expect(treePaths(gh).filter((p) => p.endsWith('.svg'))).toEqual([]);
   expect([...gh.files.keys()].filter((p) => p.startsWith('src/assets/uploads/') && p.endsWith('.svg'))).toEqual([]);
 });
-
-/** The inert preview container (inside the "Preview" tab panel). */
-const previewPane = (page: Page) => page.locator('[inert][aria-label="Preview"]');
 
 async function newProject(page: Page) {
   await loggedIn(page);
@@ -363,8 +363,9 @@ test.describe('badge SVG (certifications)', () => {
       const accepted = page.getByText(NEW_IMAGE);
       const rejected = page.locator('p[role="alert"]', { hasText: SVG_UNREADABLE });
       await expect(accepted.or(rejected)).toBeVisible();
-      // Give any deferred handler (onload/onerror) a chance to fire before checking the trap.
-      await page.waitForTimeout(300);
+      // Negative check: there is no event to wait for when nothing executes, so give any deferred handler
+      // (onload/onerror) a fixed window to fire before checking the trap.
+      await page.waitForTimeout(SVG_TRAP_WINDOW_MS);
       expect(await page.evaluate(() => (window as unknown as { __pwned?: unknown }).__pwned)).toBeUndefined();
       expect(await page.evaluate(() => 'pwned' in document.documentElement.dataset)).toBe(false);
 

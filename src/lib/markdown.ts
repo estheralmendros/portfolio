@@ -20,9 +20,12 @@ function decodeEntities(input: string): string {
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
+/** Two leading slashes in any mix of '/' and backslash: browsers read a backslash as '/' in http(s) URLs. */
+const PROTOCOL_RELATIVE_RE = /^[/\\]{2}/;
+
 /**
  * Normalizes (decode entities, strip U+0000–U+0020 and U+007F) then classifies.
- * link: https|http|mailto kept; '//' -> null; '/x' -> withBase; '#', './', '../', bare path kept; other scheme -> null.
+ * link: https|http|mailto kept; '//' (or backslash variants) -> null; '/x' -> withBase; '#', './', '../', bare path kept; other scheme -> null.
  * image: https kept; '/x' -> withBase; anything else -> null.
  */
 export function sanitizeUrl(url: string, kind: 'link' | 'image'): string | null {
@@ -31,17 +34,13 @@ export function sanitizeUrl(url: string, kind: 'link' | 'image'): string | null 
   const scheme = SCHEME_RE.exec(normalized)?.[0].toLowerCase();
   if (kind === 'image') {
     if (scheme) return scheme === 'https:' ? normalized : null;
-    if (normalized.startsWith('/') && !normalized.startsWith('//')) return withBase(normalized);
+    if (normalized.startsWith('/') && !PROTOCOL_RELATIVE_RE.test(normalized)) return withBase(normalized);
     return null;
   }
   if (scheme) return scheme === 'https:' || scheme === 'http:' || scheme === 'mailto:' ? normalized : null;
-  if (normalized.startsWith('//')) return null;
+  if (PROTOCOL_RELATIVE_RE.test(normalized)) return null;
   if (normalized.startsWith('/')) return withBase(normalized);
   return normalized;
-}
-
-export function isSafeUrl(url: string, kind: 'link' | 'image'): boolean {
-  return sanitizeUrl(url, kind) !== null;
 }
 
 function escapeAttr(value: string): string {

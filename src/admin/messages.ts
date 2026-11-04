@@ -14,6 +14,11 @@ export const NO_LONGER_WRITE = 'This token can no longer write to the repository
 export const SAVE_FAILED = "Couldn't save. Check your connection and try again.";
 export { githubRejectedMessage };
 export const DISCARD_CONFIRM = 'Discard unsaved changes?';
+export const SAVE = 'Save';
+export const CANCEL = 'Cancel';
+export const RELOAD = 'Reload';
+export const DELETING = 'Deleting…';
+export const FORM_VIEW = 'Form view';
 
 // Reorder (prd2 Feature 2)
 export const ORDER_CHANGED = 'Order changed —';
@@ -39,13 +44,16 @@ export const DEPLOY = {
 } as const;
 
 // Section forms (prd2 Feature 1)
-export const SKILL_CATEGORY_LABELS = { languages: 'Languages', frameworks: 'Frameworks', cloud: 'Cloud', tools: 'Tools' } as const;
+export { SKILL_CATEGORY_LABELS } from '../lib/skills';
 export const AVAILABILITY_LABELS = { open: 'Open to opportunities', 'not-looking': 'Not looking', freelance: 'Available for freelance' } as const;
 export const ID_LOCKED_HINT = 'The id cannot change.';
 export const ICON_HINT = 'e.g. typescript — see simpleicons.org';
 export const WHOLE_NUMBER = 'Enter a whole number';
 export const MAX_HIGHLIGHTS = 'Use at most 8 highlights';
-export const idTaken = (label: string) => `This id is already used by '${label}'`;
+export const idTaken = (label: string, noun = 'id') => `This ${noun} is already used by '${label}'`;
+export const SLUG_LOCKED_HINT = 'The slug is the page URL and cannot change.';
+/** `url` is the base-aware project path, e.g. withBase('/projects/<slug>/'). */
+export const slugHint = (url: string) => `Used in the URL: ${url}`;
 export const skillNameTaken = (name: string) => `A skill named '${name}' already exists`;
 
 // Navigation (prd2 Feature 1)
@@ -110,6 +118,8 @@ export function savedMessage(attachments: readonly ('image' | 'cv' | '-cv')[] = 
 export const PREVIEW = 'Preview';
 export const EDIT_TAB = 'Edit';
 export const FIX_ERRORS_TO_SAVE = 'Fix errors to save';
+/** Save blocked by an error no field shows (review S2): the first message, when there is one. */
+export const invalidFormMessage = (first?: string) => (first ? `${FIX_ERRORS_TO_SAVE}: ${first}` : FIX_ERRORS_TO_SAVE);
 export const PREVIEW_UNAVAILABLE = 'Preview unavailable';
 export const ICONS_AFTER_DEPLOY = 'Icons appear after deploy';
 export const PLACEHOLDER = '—';

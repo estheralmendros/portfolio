@@ -8,10 +8,10 @@ on:
   schedule:
     - cron: '0 6 * * 1'
 
+# Least privilege: the verify job (which runs npm ci and the whole test suite) only reads the repo;
+# the Pages/OIDC write scopes are granted to the deploy job alone.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -78,6 +78,9 @@ jobs:
   deploy:
     needs: verify
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

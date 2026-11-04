@@ -23,6 +23,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...astro.configs.recommended,
+  ...astro.configs['jsx-a11y-recommended'],
   {
     files: ['**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks, 'jsx-a11y': jsxA11y },
@@ -43,6 +44,26 @@ export default tseslint.config(
   {
     files: ['*.config.{js,ts}', 'eslint.config.js'],
     languageOptions: { globals: globals.node },
+  },
+  // Admin bundle (R15, also checked by smoke over the built JS): never pull in simple-icons or the
+  // glob-backed upload resolver. Type-only imports are fine (e.g. `import type` from lib/imageResolver).
+  {
+    files: ['src/admin/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [{ name: 'simple-icons', message: 'simple-icons is build-only; the admin uses the initials fallback.', allowTypeImports: true }],
+          patterns: [
+            {
+              group: ['simple-icons/*', '**/lib/images', '**/lib/images.*', '**/lib/icons', '**/lib/icons.*'],
+              message: 'Build-only module (upload glob / simple-icons): never import it from src/admin; use `import type` from lib/imageResolver.',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
   },
   // Test-content isolation: component and e2e tests never read the owner's real /content.
   {

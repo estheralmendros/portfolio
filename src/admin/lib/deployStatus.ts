@@ -7,7 +7,7 @@ export type DeployState =
   | { kind: 'deploying' }
   | { kind: 'live' }
   | { kind: 'failed'; runUrl: string }
-  | { kind: 'superseded'; runUrl: string }
+  | { kind: 'superseded' }
   | { kind: 'unknown'; reason: 'forbidden' | 'timeout' | 'unexpected' };
 
 const FAILED = new Set(['failure', 'timed_out', 'startup_failure', 'action_required']);
@@ -18,7 +18,7 @@ export function mapRunToState(run: WorkflowRun | null): DeployState {
   const c = run.conclusion;
   if (c === 'success') return { kind: 'live' };
   if (c !== null && FAILED.has(c)) return { kind: 'failed', runUrl: run.html_url };
-  if (c !== null && SUPERSEDED.has(c)) return { kind: 'superseded', runUrl: run.html_url };
+  if (c !== null && SUPERSEDED.has(c)) return { kind: 'superseded' };
   return { kind: 'unknown', reason: 'unexpected' };
 }
 
@@ -49,7 +49,6 @@ export function pollDeployStatus(opts: {
 
   const startedAt = now();
   let runStartedAt: number | null = null;
-  let last: DeployState = { kind: 'deploying' };
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -60,12 +59,8 @@ export function pollDeployStatus(opts: {
   };
   signal?.addEventListener('abort', stop);
 
-  const emit = (s: DeployState) => {
-    last = s;
-    onUpdate(s);
-  };
   const finish = (s: DeployState) => {
-    emit(s);
+    onUpdate(s);
     stop();
   };
   const deadline = () => (runStartedAt !== null ? runStartedAt + runTimeoutMs : startedAt + queueTimeoutMs);
@@ -81,7 +76,6 @@ export function pollDeployStatus(opts: {
         const started = run.run_started_at ? Date.parse(run.run_started_at) : Number.NaN;
         runStartedAt = Number.isFinite(started) ? started : (runStartedAt ?? now());
       }
-      if (last.kind !== 'deploying') emit(state);
     } catch (e) {
       if (stopped) return;
       if (e instanceof PermissionError || e instanceof NotFoundError) return finish({ kind: 'unknown', reason: 'forbidden' });
@@ -91,12 +85,13 @@ export function pollDeployStatus(opts: {
         delay = Math.max(intervalMs, Math.ceil(wait / intervalMs) * intervalMs);
         if (now() + delay > deadline()) return finish(TIMEOUT);
       }
-      // Network errors, 5xx and anything else: keep the last state and try again.
+      // Network errors, 5xx and anything else: stay 'deploying' and try again.
     }
     if (now() >= deadline()) return finish(TIMEOUT);
     timer = setTimeout(() => void tick(), delay);
   };
 
-  emit(last);
+  // Until a final state, the badge shows 'deploying' (emitted once, up front).
+  onUpdate({ kind: 'deploying' });
   void tick();
 }

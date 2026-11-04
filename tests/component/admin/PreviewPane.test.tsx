@@ -3,19 +3,19 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PreviewPane } from '../../../src/admin/components/PreviewPane';
 import { FormLayout } from '../../../src/admin/components/formKit';
+import { previewPane } from '../fixtures';
 
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
-const pane = () => screen.getByLabelText('Preview');
 
 describe('PreviewPane', () => {
   it('renders the snapshot inside an inert container labelled "Preview"', () => {
     render(<PreviewPane snapshot={{ title: 'Hello' }} valid render={(s) => <h4>{s.title}</h4>} />);
-    expect(pane()).toHaveAttribute('inert');
-    expect(within(pane()).getByText('Hello')).toBeInTheDocument();
+    expect(previewPane()).toHaveAttribute('inert');
+    expect(within(previewPane()).getByText('Hello')).toBeInTheDocument();
     expect(screen.queryByText('Fix errors to save')).toBeNull();
   });
 
@@ -27,9 +27,20 @@ describe('PreviewPane', () => {
     act(() => vi.advanceTimersByTime(100));
     rerender(view('ABC'));
     act(() => vi.advanceTimersByTime(149));
-    expect(within(pane()).getByText('A')).toBeInTheDocument();
+    expect(within(previewPane()).getByText('A')).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
-    expect(within(pane()).getByText('ABC')).toBeInTheDocument();
+    expect(within(previewPane()).getByText('ABC')).toBeInTheDocument();
+  });
+
+  it('is aria-busy while a change is debounced, not once it is shown', () => {
+    vi.useFakeTimers();
+    const view = (title: string, valid = true) => <PreviewPane snapshot={{ title }} valid={valid} render={(s) => <h4>{s.title}</h4>} />;
+    const { rerender } = render(view('A'));
+    expect(previewPane()).not.toHaveAttribute('aria-busy');
+    rerender(view('AB'));
+    expect(previewPane()).toHaveAttribute('aria-busy', 'true');
+    act(() => vi.advanceTimersByTime(150));
+    expect(previewPane()).not.toHaveAttribute('aria-busy');
   });
 
   it('shows "Fix errors to save" above the preview when invalid (after the debounce too)', () => {
@@ -40,7 +51,7 @@ describe('PreviewPane', () => {
     expect(screen.queryByText('Fix errors to save')).toBeNull();
     act(() => vi.advanceTimersByTime(150));
     const fix = screen.getByText('Fix errors to save');
-    expect(pane().contains(fix)).toBe(false);
+    expect(previewPane().contains(fix)).toBe(false);
   });
 
   it('a throwing render shows "Preview unavailable" and recovers on the next snapshot', () => {
@@ -60,14 +71,14 @@ describe('PreviewPane', () => {
     expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
     rerender(view(false));
     act(() => vi.advanceTimersByTime(150));
-    expect(within(pane()).getByText('fine')).toBeInTheDocument();
+    expect(within(previewPane()).getByText('fine')).toBeInTheDocument();
     expect(screen.queryByText('Preview unavailable')).toBeNull();
   });
 
   it('shows an optional note outside the inert container', () => {
     render(<PreviewPane snapshot={{}} valid note="Icons appear after deploy" render={() => <p>x</p>} />);
     const note = screen.getByText('Icons appear after deploy');
-    expect(pane().contains(note)).toBe(false);
+    expect(previewPane().contains(note)).toBe(false);
   });
 });
 

@@ -78,6 +78,8 @@ The Projects section has a technology filter (chips above the grids, single-sele
 
 `.github/workflows/deploy.yml` runs on every push to `main`, on manual dispatch and weekly. The `verify` job runs lint, typecheck, unit/component tests, the real build + smoke check, the fixture build + smoke check, and the e2e suite; the `deploy` job publishes `dist/` to GitHub Pages only if all of them pass.
 
+The weekly `schedule` run (Mondays 06:00 UTC) only refreshes build-time values: the "Expired" label on certifications and the footer year. GitHub automatically disables `schedule` triggers in a public repository after 60 days without repository activity, and then that refresh silently stops. If the site has not been edited for a while, re-enable the workflow in **Actions → Verify and deploy → Enable workflow** (GitHub also emails a warning before disabling it), or simply run it with **Run workflow**.
+
 ## Security
 
 The admin keeps the token in `sessionStorage`, which is scoped per **origin**. `https://estheralmendros.github.io` is shared by every GitHub Pages project site of the account and by the public portfolio pages, so any script running on that origin in the same tab could read the token. This is an accepted, documented risk, mitigated as follows:

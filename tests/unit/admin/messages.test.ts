@@ -51,3 +51,14 @@ describe('phase 4 copy', () => {
     expect(formatBytes(1.2 * 1024 * 1024)).toBe('1.2 MB');
   });
 });
+
+describe('review copy', () => {
+  it('idTaken takes the noun (slug for projects); invalidFormMessage adds the first message when known', async () => {
+    const { idTaken, invalidFormMessage, slugHint } = await import('../../../src/admin/messages');
+    expect(idTaken('X')).toBe("This id is already used by 'X'");
+    expect(idTaken('X', 'slug')).toBe("This slug is already used by 'X'");
+    expect(invalidFormMessage()).toBe('Fix errors to save');
+    expect(invalidFormMessage('Bad')).toBe('Fix errors to save: Bad');
+    expect(slugHint('/base/projects/<slug>/')).toBe('Used in the URL: /base/projects/<slug>/');
+  });
+});

@@ -1,15 +1,14 @@
-import { useMemo, useRef, useState, type SubmitEvent } from 'react';
+import { type SubmitEvent, useMemo } from 'react';
 import { ExperienceSchema, type Experience } from '../../content/schema';
 import { TimelineItem } from '../../components/TimelineItem';
-import { slugify } from '../../lib/slugify';
 import { issuesToFieldErrors, parseLines, parseTags } from '../lib/formUtils';
-import { ID_LOCKED_HINT, MAX_HIGHLIGHTS, idTaken } from '../messages';
+import { MAX_HIGHLIGHTS } from '../messages';
 import { monthOrPlaceholder, orPlaceholder } from '../previewValues';
 import { entryLabel } from '../sections';
 import { PreviewPane } from './PreviewPane';
 import {
-  Field, FieldError, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, differs, focusFirstError, useDirtyReport, useSaveRunner,
-  type FieldErrors,
+  Field, FieldError, FormActions, FormLayout, IdField, REQUIRED_MESSAGE, SaveBanners, duplicateIdError, isSavable, useAutoId, useEntryForm,
+  type Checked, type FieldErrors,
 } from './formKit';
 
 interface Values {
@@ -84,46 +83,29 @@ export function ExperienceForm({
   onReload: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
-  const [loaded] = useState(() => toValues(initial));
-  const [values, setValues] = useState(loaded);
-  const [idTouched, setIdTouched] = useState(mode === 'edit');
-  const [errors, setErrors] = useState<FieldErrors<FieldName>>({});
-  const { saving, conflict, saveError, run } = useSaveRunner();
-  const formRef = useRef<HTMLFormElement>(null);
-  useDirtyReport(differs(values, loaded), onDirtyChange);
+  const form = useEntryForm({ initialValues: () => toValues(initial), order: FIELD_ORDER, onDirtyChange });
+  const { values, errors, saving, conflict, saveError, formError, formRef } = form;
+  const autoId = useAutoId<Values>(mode === 'edit', ['role', 'org'], (v) => `${v.role} ${v.org}`);
+  const set = <K extends keyof Values>(key: K, value: Values[K]) => form.set(key, value, autoId.derive);
 
-  const set = <K extends keyof Values>(key: K, value: Values[K]) =>
-    setValues((v) => {
-      const next = { ...v, [key]: value };
-      if ((key === 'role' || key === 'org') && !idTouched) next.id = slugify(`${next.role} ${next.org}`);
-      return next;
-    });
-
-  const validate = (): Experience | null => {
+  /** One check for Save and the preview (review S1). */
+  const check = (): Checked<FieldName, Experience> => {
     const raw = toRaw(values);
-    const highlights = raw.highlights;
     const result = ExperienceSchema.safeParse(raw);
     const fieldErrors: FieldErrors<FieldName> = result.success ? {} : (issuesToFieldErrors(result.error.issues) as FieldErrors<FieldName>);
     for (const f of ['role', 'org', 'id', 'start'] as const) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
     if (!values.present && values.end.trim() === '') fieldErrors.end = REQUIRED_MESSAGE;
-    if (highlights.length > MAX_HIGHLIGHT_COUNT) fieldErrors.highlights = MAX_HIGHLIGHTS;
+    if (raw.highlights.length > MAX_HIGHLIGHT_COUNT) fieldErrors.highlights = MAX_HIGHLIGHTS;
     if (mode === 'create' && !fieldErrors.id) {
-      const dup = existing.find((x) => x.id === raw.id);
-      if (dup) fieldErrors.id = idTaken(experienceLabel(dup));
+      const dup = duplicateIdError(existing, raw.id, experienceLabel);
+      if (dup) fieldErrors.id = dup;
     }
-    setErrors(fieldErrors);
-    if (focusFirstError(formRef, FIELD_ORDER, fieldErrors)) return null;
-    return result.success ? result.data : null;
+    return { errors: fieldErrors, data: result.success ? result.data : null };
   };
+  const checked = check();
+  const submit = (e: SubmitEvent<HTMLFormElement>) => form.submit(e, check, onSave);
 
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (saving || conflict) return;
-    const entry = validate();
-    if (entry) void run(() => onSave(entry));
-  };
-
-  const input = (name: 'role' | 'org' | 'id' | 'start' | 'location' | 'tags', label: string, opts: { required?: boolean; type?: string; hint?: string } = {}) => (
+  const input = (name: 'role' | 'org' | 'start' | 'location' | 'tags', label: string, opts: { required?: boolean; type?: string; hint?: string } = {}) => (
     <Field name={name} label={label} required={opts.required} error={errors[name]} hint={opts.hint}>
       {(c) => (
         <input
@@ -131,18 +113,14 @@ export function ExperienceForm({
           type={opts.type ?? 'text'}
           placeholder={opts.type === 'month' ? 'YYYY-MM' : undefined}
           value={values[name]}
-          readOnly={name === 'id' && mode === 'edit'}
-          onChange={(e) => {
-            if (name === 'id') setIdTouched(true);
-            set(name, e.target.value);
-          }}
+          onChange={(e) => set(name, e.target.value)}
         />
       )}
     </Field>
   );
 
   const snapshot = useMemo(() => ({ values }), [values]);
-  const previewValid = ExperienceSchema.safeParse(toRaw(values)).success && parseLines(values.highlights).length <= MAX_HIGHLIGHT_COUNT;
+  const previewValid = isSavable(checked);
   const preview = (
     <PreviewPane
       snapshot={snapshot}
@@ -157,7 +135,7 @@ export function ExperienceForm({
 
   return (
     <FormLayout aside={preview}>
-      <SaveBanners conflict={conflict} saveError={saveError} onReload={onReload} />
+      <SaveBanners conflict={conflict} saveError={saveError} formError={formError} onReload={onReload} />
       <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-1">
           <legend className="font-medium">Type</legend>
@@ -172,12 +150,21 @@ export function ExperienceForm({
         </fieldset>
         {input('role', 'Role', { required: true })}
         {input('org', 'Organization', { required: true })}
-        {input('id', 'Id', { required: true, hint: mode === 'edit' ? ID_LOCKED_HINT : undefined })}
+        <IdField
+          mode={mode}
+          value={values.id}
+          error={errors.id}
+          onChange={(v) => {
+            autoId.touch();
+            set('id', v);
+          }}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           {input('start', 'Start', { required: true, type: 'month' })}
           <div className="flex flex-col gap-1">
             <label htmlFor="f-end" className="font-medium">
               End
+              {!values.present && <span aria-hidden="true">*</span>}
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -189,6 +176,7 @@ export function ExperienceForm({
                 value={values.present ? '' : values.end}
                 disabled={values.present}
                 aria-invalid={errors.end ? true : undefined}
+                aria-required={values.present ? undefined : true}
                 aria-describedby={errors.end ? 'f-end-error' : undefined}
                 onChange={(e) => set('end', e.target.value)}
               />

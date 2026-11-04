@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { SECTION_META } from '../sections';
+import type { ListSection } from '../useHashRoute';
+import { COLLECTIONS } from '../lib/contentStore';
 import { NotFoundError, RateLimitError, RemoteContentError, rateLimitMessage } from '../lib/errors';
 import { ReorderableList, type ReorderGroup } from './ReorderableList';
 import { StatusBanner } from './StatusBanner';
@@ -24,17 +27,18 @@ export function listErrorMessage(error: Error, path = 'content/projects.json', p
 
 /** Loading / error / ready states of a list screen; the ready state is a ReorderableList with Edit/Delete per row. */
 export function CollectionList<T extends { id: string }>({
-  state, path, plural, singular, label, renderItem, groups, groupOf, onRetry, onNew, onEdit, onDelete, onSaveOrder, onPendingChange,
+  state, section, label, renderItem, groups, groupOf, onRetry, onNew, onEdit, onDelete, onSaveOrder, onPendingChange,
 }: ListHandlers<T> & {
   state: ListState<T>;
-  path: string;
-  plural: string;
-  singular: string;
+  /** Path, singular and plural come from the section (SECTION_META, COLLECTIONS). */
+  section: ListSection;
   label: (item: T) => string;
   renderItem: (item: T) => ReactNode;
   groups?: ReorderGroup[];
   groupOf?: (item: T) => string;
 }) {
+  const { path } = COLLECTIONS[section];
+  const { plural, singular } = SECTION_META[section];
   if (state.status === 'loading') return <p role="status">Loading {plural}…</p>;
   if (state.status === 'error') {
     const editable = !(state.error instanceof RemoteContentError);
@@ -63,7 +67,7 @@ export function CollectionList<T extends { id: string }>({
       onPendingChange={onPendingChange}
       empty={<p>No {plural} yet.</p>}
       toolbar={({ disabled }) => (
-        <button type="button" className="btn-primary" disabled={disabled} onClick={onNew}>
+        <button type="button" className="btn-primary" data-new-entry="" disabled={disabled} onClick={onNew}>
           + New {singular}
         </button>
       )}

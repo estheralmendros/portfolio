@@ -24,12 +24,12 @@ export function ProjectCard({ project, image, hasDetail, featured = false }: { p
           <div className="mt-auto flex flex-wrap gap-5 border-t border-line pt-4 text-sm">
             {project.repoUrl && (
               <ExternalLink href={project.repoUrl} className="card-link">
-                Repo ↗
+                Repo <span className="sr-only">for {project.title}</span> <span aria-hidden="true">↗</span>
               </ExternalLink>
             )}
             {project.demoUrl && (
               <ExternalLink href={project.demoUrl} className="card-link">
-                Demo ↗
+                Demo <span className="sr-only">for {project.title}</span> <span aria-hidden="true">↗</span>
               </ExternalLink>
             )}
             {hasDetail && (

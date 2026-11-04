@@ -1,18 +1,13 @@
-import { useMemo, useRef, useState, type SubmitEvent } from 'react';
+import { type SubmitEvent, useMemo } from 'react';
 import { CertificationSchema, type Certification } from '../../content/schema';
 import { CertificationCard } from '../../components/CertificationCard';
 import { currentYearMonth } from '../../lib/dates';
-import { slugify } from '../../lib/slugify';
-import { buildUploadPath } from '../../lib/uploads';
-import { useLastCommitSha } from '../adminContext';
 import { emptyToUndefined, issuesToFieldErrors } from '../lib/formUtils';
-import { checkTypedImageRef, finalizeUpload, type PendingUpload } from '../lib/imageProcessing';
-import { resolvePreviewImage } from '../lib/previewImage';
-import { ID_LOCKED_HINT, IMAGE_NOT_UPLOADED, idTaken } from '../messages';
+import type { PendingUpload } from '../lib/imageProcessing';
 import { httpsOrUndefined, monthOrPlaceholder, opt, orPlaceholder } from '../previewValues';
 import {
-  Field, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, differs, focusFirstError, useDirtyReport, useSaveRunner,
-  type FieldErrors, type SaveExtras,
+  Field, FormActions, FormLayout, IdField, REQUIRED_MESSAGE, SaveBanners, duplicateIdError, imageRef, isSavable, useAutoId, useEntryForm,
+  useImageUpload, type Checked, type FieldErrors, type SaveExtras,
 } from './formKit';
 import { ImageField, type ProcessFn } from './ImageField';
 import { PreviewPane } from './PreviewPane';
@@ -51,7 +46,7 @@ function toRaw(v: Values, upload: PendingUpload | null) {
     expires: v.expires.trim(),
     credentialId: v.credentialId,
     credentialUrl: v.credentialUrl.trim(),
-    badge: upload ? buildUploadPath('certifications', v.id.trim(), upload.image.ext, upload.shortId) : v.badge.trim(),
+    badge: imageRef('certifications', v.badge, v.id.trim(), upload),
   });
 }
 
@@ -82,52 +77,42 @@ export function CertificationForm({
   onDirtyChange?: (dirty: boolean) => void;
   processImage?: ProcessFn;
 }) {
-  const [loaded] = useState(() => toValues(initial));
-  const [values, setValues] = useState(loaded);
-  const [upload, setUpload] = useState<PendingUpload | null>(null);
-  const commitRef = useLastCommitSha();
-  const [idTouched, setIdTouched] = useState(mode === 'edit');
-  const [errors, setErrors] = useState<FieldErrors<FieldName>>({});
-  const { saving, conflict, saveError, run } = useSaveRunner();
-  const formRef = useRef<HTMLFormElement>(null);
-  useDirtyReport(differs(values, loaded) || upload !== null, onDirtyChange);
+  const image = useImageUpload('certifications', initial?.badge);
+  const { upload } = image;
+  const form = useEntryForm({
+    initialValues: () => toValues(initial),
+    order: FIELD_ORDER,
+    extraDirty: upload !== null,
+    busy: image.busy,
+    onDirtyChange,
+  });
+  const { values, errors, saving, conflict, saveError, formError, formRef } = form;
+  const autoId = useAutoId<Values>(mode === 'edit', ['name'], (v) => v.name);
+  const set = (key: keyof Values, value: string) => form.set(key, value, autoId.derive);
 
-  const set = (key: keyof Values, value: string) =>
-    setValues((v) => ({ ...v, [key]: value, ...(key === 'name' && !idTouched ? { id: slugify(value) } : {}) }));
-
-  const validate = (): Certification | null => {
+  /** One check for Save and the preview (review S1). */
+  const check = (): Checked<FieldName, Certification> => {
     const result = CertificationSchema.safeParse(toRaw(values, upload));
     const fieldErrors: FieldErrors<FieldName> = result.success ? {} : (issuesToFieldErrors(result.error.issues) as FieldErrors<FieldName>);
     for (const f of REQUIRED) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
-    if (upload) delete fieldErrors.badge; // built from the id: the name/id errors cover it (Feature 3 step 5a)
-    else {
-      const typed = checkTypedImageRef(values.badge, initial?.badge);
-      if (typed) fieldErrors.badge = typed;
-    }
+    image.checkErrors(fieldErrors, 'badge', values.badge);
     if (mode === 'create' && !fieldErrors.id) {
-      const dup = existing.find((c) => c.id === values.id.trim());
-      if (dup) fieldErrors.id = idTaken(dup.name);
+      const dup = duplicateIdError(existing, values.id.trim(), (c) => c.name);
+      if (dup) fieldErrors.id = dup;
     }
-    setErrors(fieldErrors);
-    if (focusFirstError(formRef, FIELD_ORDER, fieldErrors)) return null;
-    return result.success ? result.data : null;
+    return { errors: fieldErrors, data: result.success ? result.data : null };
   };
+  const checked = check();
 
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (saving || conflict) return;
-    const cert = validate();
-    if (!cert) return;
-    const pending = upload;
-    void run(async () => {
-      if (!pending) return onSave(cert);
-      const { path, file } = await finalizeUpload('certifications', cert.id, pending);
-      await onSave({ ...cert, badge: path }, { files: [file], attachments: ['image'] });
+  const submit = (e: SubmitEvent<HTMLFormElement>) =>
+    form.submit(e, check, async (cert) => {
+      const file = await image.finalize(cert.id);
+      if (!file) return onSave(cert);
+      await onSave({ ...cert, badge: file.path }, { files: [file.file], attachments: ['image'] });
     });
-  };
 
   const snapshot = useMemo(() => ({ values, upload }), [values, upload]);
-  const previewValid = CertificationSchema.safeParse(toRaw(values, upload)).success && (upload !== null || !checkTypedImageRef(values.badge, initial?.badge));
+  const previewValid = isSavable(checked);
   const preview = (
     <PreviewPane
       snapshot={snapshot}
@@ -135,14 +120,14 @@ export function CertificationForm({
       render={({ values: v, upload: up }) => (
         <CertificationCard
           certification={previewCertification(v, up)}
-          badge={resolvePreviewImage(up ? undefined : v.badge, { objectUrl: up?.objectUrl, commitRef })}
+          badge={image.previewImage(v.badge, up)}
           now={currentYearMonth()}
         />
       )}
     />
   );
 
-  const input = (name: FieldName, label: string, type = 'text', hint?: string) => (
+  const input = (name: Exclude<FieldName, 'id' | 'badge'>, label: string, type = 'text', hint?: string) => (
     <Field name={name} label={label} required={REQUIRED.includes(name)} error={errors[name]} hint={hint}>
       {(c) => (
         <input
@@ -150,11 +135,7 @@ export function CertificationForm({
           type={type}
           placeholder={type === 'month' ? 'YYYY-MM' : undefined}
           value={values[name]}
-          readOnly={name === 'id' && mode === 'edit'}
-          onChange={(e) => {
-            if (name === 'id') setIdTouched(true);
-            set(name, e.target.value);
-          }}
+          onChange={(e) => set(name, e.target.value)}
         />
       )}
     </Field>
@@ -162,10 +143,18 @@ export function CertificationForm({
 
   return (
     <FormLayout aside={preview}>
-      <SaveBanners conflict={conflict} saveError={saveError} onReload={onReload} conflictNotes={upload ? [IMAGE_NOT_UPLOADED] : []} />
+      <SaveBanners conflict={conflict} saveError={saveError} formError={formError} onReload={onReload} conflictNotes={image.conflictNotes} />
       <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-4">
         {input('name', 'Name')}
-        {input('id', 'Id', 'text', mode === 'edit' ? ID_LOCKED_HINT : undefined)}
+        <IdField
+          mode={mode}
+          value={values.id}
+          error={errors.id}
+          onChange={(v) => {
+            autoId.touch();
+            set('id', v);
+          }}
+        />
         {input('issuer', 'Issuer')}
         <div className="grid gap-4 sm:grid-cols-2">
           {input('issued', 'Issued', 'month')}
@@ -180,12 +169,11 @@ export function CertificationForm({
           alt={`${values.name} badge`}
           value={values.badge}
           onValueChange={(v) => set('badge', v)}
-          pending={upload}
-          onPendingChange={setUpload}
+          {...image.fieldProps}
           error={errors.badge}
           process={processImage}
         />
-        <FormActions saving={saving} conflict={conflict} onCancel={onCancel} />
+        <FormActions saving={saving} conflict={conflict} busy={image.busy} onCancel={onCancel} />
       </form>
     </FormLayout>
   );

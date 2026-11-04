@@ -16,18 +16,23 @@ export function ContactSection({ socials }: { socials: Profile['socials'] }) {
             {socials.email}
           </a>
         </li>
-        <li>
-          <ExternalLink href={socials.linkedin} className="btn-ghost">
-            <LinkedInIcon />
-            LinkedIn ↗
-          </ExternalLink>
-        </li>
-        <li>
-          <ExternalLink href={socials.github} className="btn-ghost">
-            <GitHubIcon />
-            GitHub ↗
-          </ExternalLink>
-        </li>
+        {/* Always set on the public site (schema); the admin preview blanks a malformed URL (prd2 5.7). */}
+        {socials.linkedin && (
+          <li>
+            <ExternalLink href={socials.linkedin} className="btn-ghost">
+              <LinkedInIcon />
+              LinkedIn <span aria-hidden="true">↗</span>
+            </ExternalLink>
+          </li>
+        )}
+        {socials.github && (
+          <li>
+            <ExternalLink href={socials.github} className="btn-ghost">
+              <GitHubIcon />
+              GitHub <span aria-hidden="true">↗</span>
+            </ExternalLink>
+          </li>
+        )}
       </ul>
       </div>
     </section>

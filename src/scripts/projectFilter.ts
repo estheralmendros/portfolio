@@ -1,5 +1,5 @@
 // Public project filter: progressive enhancement over the ProjectsSection markup (bundled external module).
-import { decodeTags } from '../lib/projectFilter';
+import { cardMatches, decodeTags } from '../lib/projectFilter';
 
 export function initProjectFilter(root: ParentNode): void {
   const filter = root.querySelector<HTMLElement>('[data-project-filter]');
@@ -15,9 +15,7 @@ export function initProjectFilter(root: ParentNode): void {
     for (const c of chips) c.setAttribute('aria-pressed', String((c.dataset.tag ?? '') === tag));
     let shown = 0;
     for (const card of cards) {
-      const tags = decodeTags(card.getAttribute('data-tags'));
-      // Unparseable data-tags: keep the card visible under every filter.
-      const visible = tag === '' || tags === null || tags.includes(tag);
+      const visible = cardMatches(decodeTags(card.getAttribute('data-tags')), tag);
       card.hidden = !visible;
       if (visible) shown++;
     }

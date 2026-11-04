@@ -9,10 +9,14 @@ export function collectTags(projects: { tags: string[] }[]): string[] {
   return [...seen.values()].sort(byLabel);
 }
 
-/** Ids of the projects carrying `tag` (case-insensitive); `null` -> all. */
-export function filterProjectIds(projects: { id: string; tags: string[] }[], tag: string | null): Set<string> {
-  const wanted = tag?.toLowerCase();
-  return new Set(projects.filter((p) => wanted == null || p.tags.some((t) => t.toLowerCase() === wanted)).map((p) => p.id));
+/**
+ * Whether a card stays visible under the active filter `tag` ('' = All). Case-insensitive.
+ * `tags === null` (unparseable `data-tags`) keeps the card visible under every filter.
+ */
+export function cardMatches(tags: string[] | null, tag: string): boolean {
+  if (tag === '' || tags === null) return true;
+  const wanted = tag.toLowerCase();
+  return tags.some((t) => t.toLowerCase() === wanted);
 }
 
 /** `data-tags` value: a JSON array of lowercased tags (no delimiter to break). */

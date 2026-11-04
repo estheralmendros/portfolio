@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { CertificationForm } from '../../../src/admin/components/CertificationForm';
 import { NetworkError } from '../../../src/admin/lib/errors';
 import { certification } from './fakeClient';
+import { previewPane, stubObjectUrls } from '../fixtures';
 import type { SaveExtras } from '../../../src/admin/components/formKit';
 import type { ImageKind, ProcessedImage } from '../../../src/admin/lib/imageProcessing';
 import type { Certification } from '../../../src/content/schema';
@@ -113,14 +114,12 @@ describe('CertificationForm', () => {
 
 describe('CertificationForm (badge upload + preview)', () => {
   beforeEach(() => {
-    URL.createObjectURL = vi.fn(() => 'blob:http://localhost/badge');
-    URL.revokeObjectURL = vi.fn();
+    stubObjectUrls(() => 'blob:http://localhost/badge');
   });
   const processImage = vi.fn(async (_f: File, _k: ImageKind): Promise<ProcessedImage> => ({
     blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }), ext: 'png', width: 320, height: 320,
   }));
   const badgeInput = () => document.querySelector<HTMLInputElement>('input[name="badge-file"]')!;
-  const previewPane = () => screen.getByLabelText('Preview', { selector: '[inert]' });
 
   it('the badge input accepts SVG; an upload commits certifications/<final id>-<hex>.png with (+image)', async () => {
     const { onSave } = setup({ processImage });

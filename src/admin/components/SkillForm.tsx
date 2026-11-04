@@ -1,15 +1,14 @@
-import { useMemo, useRef, useState, type SubmitEvent } from 'react';
+import { type SubmitEvent, useMemo } from 'react';
 import { SkillCategorySchema, SkillSchema, type Skill } from '../../content/schema';
 import { SkillsSection } from '../../components/SkillsSection';
-import { slugify } from '../../lib/slugify';
 import { insertSkill } from '../lib/contentStore';
 import { issuesToFieldErrors } from '../lib/formUtils';
-import { ICONS_AFTER_DEPLOY, ICON_HINT, ID_LOCKED_HINT, SKILL_CATEGORY_LABELS, WHOLE_NUMBER, idTaken, skillNameTaken } from '../messages';
+import { ICONS_AFTER_DEPLOY, ICON_HINT, SKILL_CATEGORY_LABELS, WHOLE_NUMBER, skillNameTaken } from '../messages';
 import { orPlaceholder } from '../previewValues';
 import { PreviewPane } from './PreviewPane';
 import {
-  Field, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, differs, focusFirstError, useDirtyReport, useSaveRunner,
-  type FieldErrors,
+  Field, FormActions, FormLayout, IdField, REQUIRED_MESSAGE, SaveBanners, duplicateIdError, isSavable, useAutoId, useEntryForm,
+  type Checked, type FieldErrors,
 } from './formKit';
 
 interface Values {
@@ -57,7 +56,7 @@ function previewSkills(v: Values, existing: Skill[], editId: string | undefined)
     ? parsed.data
     : ({ id: DRAFT_ID, name: orPlaceholder(v.name), category: v.category, ...(years !== undefined ? { years } : {}) } as Skill);
   if (editId !== undefined) return existing.map((s) => (s.id === editId ? { ...draft, id: editId } : s));
-  return insertSkill(existing.filter((s) => s.id !== DRAFT_ID), { ...draft, id: DRAFT_ID });
+  return insertSkill(existing, { ...draft, id: DRAFT_ID });
 }
 
 export function SkillForm({
@@ -71,18 +70,13 @@ export function SkillForm({
   onReload: () => void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
-  const [loaded] = useState(() => toValues(initial));
-  const [values, setValues] = useState(loaded);
-  const [idTouched, setIdTouched] = useState(mode === 'edit');
-  const [errors, setErrors] = useState<FieldErrors<FieldName>>({});
-  const { saving, conflict, saveError, run } = useSaveRunner();
-  const formRef = useRef<HTMLFormElement>(null);
-  useDirtyReport(differs(values, loaded), onDirtyChange);
+  const form = useEntryForm({ initialValues: () => toValues(initial), order: FIELD_ORDER, onDirtyChange });
+  const { values, errors, saving, conflict, saveError, formError, formRef } = form;
+  const autoId = useAutoId<Values>(mode === 'edit', ['name'], (v) => v.name);
+  const set = (key: keyof Values, value: string) => form.set(key, value, autoId.derive);
 
-  const set = (key: keyof Values, value: string) =>
-    setValues((v) => ({ ...v, [key]: value, ...(key === 'name' && !idTouched ? { id: slugify(value) } : {}) }));
-
-  const validate = (): Skill | null => {
+  /** One check for Save and the preview (review S1). */
+  const check = (): Checked<FieldName, Skill> => {
     const years = values.years.trim();
     const raw = toRaw(values);
     const result = SkillSchema.safeParse(raw);
@@ -90,31 +84,24 @@ export function SkillForm({
     for (const f of REQUIRED) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
     if (years !== '' && !/^\d+$/.test(years)) fieldErrors.years = WHOLE_NUMBER;
     if (mode === 'create' && !fieldErrors.id) {
-      const dup = existing.find((s) => s.id === raw.id);
-      if (dup) fieldErrors.id = idTaken(dup.name);
+      const dup = duplicateIdError(existing, raw.id, (s) => s.name);
+      if (dup) fieldErrors.id = dup;
     }
     if (!fieldErrors.name) {
       const name = values.name.trim().toLowerCase();
       const dup = existing.find((s) => s.id !== initial?.id && s.name.trim().toLowerCase() === name);
       if (dup) fieldErrors.name = skillNameTaken(dup.name);
     }
-    setErrors(fieldErrors);
-    if (focusFirstError(formRef, FIELD_ORDER, fieldErrors)) return null;
-    return result.success ? result.data : null;
+    return { errors: fieldErrors, data: result.success ? result.data : null };
   };
-
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (saving || conflict) return;
-    const skill = validate();
-    if (skill) void run(() => onSave(skill));
-  };
+  const checked = check();
+  const submit = (e: SubmitEvent<HTMLFormElement>) => form.submit(e, check, onSave);
 
   const snapshot = useMemo(() => ({ values }), [values]);
   const preview = (
     <PreviewPane
       snapshot={snapshot}
-      valid={SkillSchema.safeParse(toRaw(values)).success && (values.years.trim() === '' || /^\d+$/.test(values.years.trim()))}
+      valid={isSavable(checked)}
       note={ICONS_AFTER_DEPLOY}
       render={({ values: v }) => <SkillsSection skills={previewSkills(v, existing, mode === 'edit' ? initial?.id : undefined)} icons={{}} />}
     />
@@ -122,25 +109,20 @@ export function SkillForm({
 
   return (
     <FormLayout aside={preview}>
-      <SaveBanners conflict={conflict} saveError={saveError} onReload={onReload} />
+      <SaveBanners conflict={conflict} saveError={saveError} formError={formError} onReload={onReload} />
       <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-4">
         <Field name="name" label="Name" required error={errors.name}>
           {(c) => <input {...c} type="text" value={values.name} onChange={(e) => set('name', e.target.value)} />}
         </Field>
-        <Field name="id" label="Id" required error={errors.id} hint={mode === 'edit' ? ID_LOCKED_HINT : undefined}>
-          {(c) => (
-            <input
-              {...c}
-              type="text"
-              value={values.id}
-              readOnly={mode === 'edit'}
-              onChange={(e) => {
-                setIdTouched(true);
-                set('id', e.target.value);
-              }}
-            />
-          )}
-        </Field>
+        <IdField
+          mode={mode}
+          value={values.id}
+          error={errors.id}
+          onChange={(v) => {
+            autoId.touch();
+            set('id', v);
+          }}
+        />
         <Field name="category" label="Category" required error={errors.category}>
           {(c) => (
             <select {...c} value={values.category} onChange={(e) => set('category', e.target.value)}>
@@ -154,7 +136,7 @@ export function SkillForm({
           )}
         </Field>
         <Field name="years" label="Years" error={errors.years}>
-          {(c) => <input {...c} type="number" min={0} max={50} step={1} value={values.years} onChange={(e) => set('years', e.target.value)} />}
+          {(c) => <input {...c} type="text" inputMode="numeric" value={values.years} onChange={(e) => set('years', e.target.value)} />}
         </Field>
         <Field name="icon" label="Icon" error={errors.icon} hint={ICON_HINT}>
           {(c) => <input {...c} type="text" value={values.icon} onChange={(e) => set('icon', e.target.value)} />}

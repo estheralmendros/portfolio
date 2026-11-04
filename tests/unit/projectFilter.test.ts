@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectTags, decodeTags, encodeTags, filterProjectIds } from '../../src/lib/projectFilter';
+import { cardMatches, collectTags, decodeTags, encodeTags } from '../../src/lib/projectFilter';
 
 const projects = [
   { id: 'a', tags: ['React', 'TypeScript'] },
@@ -15,18 +15,24 @@ describe('collectTags', () => {
   it('empty for no tags', () => expect(collectTags([{ tags: [] }])).toEqual([]));
 });
 
-describe('filterProjectIds', () => {
-  it('null tag -> every project', () => expect(filterProjectIds(projects, null)).toEqual(new Set(['a', 'b', 'c', 'd'])));
+describe('cardMatches', () => {
+  const ids = (tag: string) => projects.filter((p) => cardMatches(p.tags, tag)).map((p) => p.id);
+  it("'' (All) -> every card, even without tags", () => expect(ids('')).toEqual(['a', 'b', 'c', 'd']));
   it('matches case-insensitively', () => {
-    expect(filterProjectIds(projects, 'REACT')).toEqual(new Set(['a', 'b']));
-    expect(filterProjectIds(projects, 'react')).toEqual(new Set(['a', 'b']));
+    expect(ids('REACT')).toEqual(['a', 'b']);
+    expect(ids('react')).toEqual(['a', 'b']);
   });
   it('tags with delimiters match exactly', () => {
-    expect(filterProjectIds(projects, 'c|d')).toEqual(new Set(['b']));
-    expect(filterProjectIds(projects, 'C')).toEqual(new Set());
-    expect(filterProjectIds(projects, 'a,b')).toEqual(new Set(['d']));
-    expect(filterProjectIds(projects, 'r&d')).toEqual(new Set(['d']));
+    expect(ids('c|d')).toEqual(['b']);
+    expect(ids('C')).toEqual([]);
+    expect(ids('a,b')).toEqual(['d']);
+    expect(ids('r&d')).toEqual(['d']);
   });
+  it('unparseable tags (null) stay visible under every filter', () => {
+    expect(cardMatches(null, '')).toBe(true);
+    expect(cardMatches(null, 'react')).toBe(true);
+  });
+  it('a card without the tag is hidden', () => expect(cardMatches([], 'react')).toBe(false));
 });
 
 describe('encodeTags / decodeTags', () => {

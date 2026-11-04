@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   BADGE_SVG_SIDE, MAX_IMAGE_BYTES, MAX_INPUT_BYTES, MAX_SIDE,
-  acceptedTypes, blobToBase64, checkTypedImageRef, computeSvgTargetSize, computeTargetSize, finalizeUpload, processImage,
+  acceptedTypes, blobToBase64, browserCodec, checkTypedImageRef, computeSvgTargetSize, computeTargetSize, finalizeUpload, processImage,
   type ImageCodec, type PendingUpload,
 } from '../../../src/admin/lib/imageProcessing';
 import { ImageError } from '../../../src/admin/lib/errors';
@@ -119,12 +119,14 @@ describe('processImage: type and size rules', () => {
   });
 
   it('accepts exactly 20 MB', async () => {
-    await expect(processImage(file('image/jpeg', MAX_INPUT_BYTES), 'project', codec())).resolves.toBeDefined();
+    const out = await processImage(file('image/jpeg', MAX_INPUT_BYTES), 'project', codec());
+    expect({ ext: out.ext, width: out.width, height: out.height }).toEqual({ ext: 'jpg', width: 1600, height: 1200 });
   });
 
   it('rejects output over 2 MB; exactly 2 MB passes', async () => {
     expect(await imageError(processImage(file('image/png'), 'profile', codec({ outBytes: MAX_IMAGE_BYTES + 1 })))).toBe(IMAGE_OUTPUT_TOO_LARGE);
-    await expect(processImage(file('image/png'), 'profile', codec({ outBytes: MAX_IMAGE_BYTES }))).resolves.toBeDefined();
+    const out = await processImage(file('image/png'), 'profile', codec({ outBytes: MAX_IMAGE_BYTES }));
+    expect({ ext: out.ext, width: out.width, height: out.height, bytes: out.blob.size }).toEqual({ ext: 'png', width: 1600, height: 1200, bytes: MAX_IMAGE_BYTES });
   });
 
   it('a corrupt raster (decode rejects) gets the unreadable-image message', async () => {
@@ -179,6 +181,21 @@ describe('processImage: raster', () => {
 });
 
 describe('processImage: SVG badge → PNG', () => {
+  it('releases the decoded SVG (blob URL) only after encoding, even when encoding fails', async () => {
+    for (const encodeError of [undefined, new Error('toBlob')]) {
+      const events: string[] = [];
+      const c = codec({ encodeError });
+      c.decodeSvg.mockImplementationOnce(async () => ({ width: 10, height: 10, source, release: () => events.push('release') }));
+      const encode = c.encode.getMockImplementation()!;
+      c.encode.mockImplementationOnce(async (...a) => {
+        events.push('encode');
+        return encode(...a);
+      });
+      await processImage(file('image/svg+xml'), 'badge', c).catch(() => undefined);
+      expect(events).toEqual(['encode', 'release']);
+    }
+  });
+
   it('loads through decodeSvg and encodes a PNG with longest side 320', async () => {
     const c = codec({ svgSize: [100, 50] });
     const out = await processImage(file('image/svg+xml'), 'badge', c);
@@ -256,5 +273,35 @@ describe('blobToBase64', () => {
   it('encodes binary blobs', async () => {
     const bytes = Uint8Array.from({ length: 50_000 }, (_, i) => (i * 7) % 256);
     expect(await blobToBase64(new Blob([bytes]))).toBe(Buffer.from(bytes).toString('base64'));
+  });
+});
+
+describe('browserCodec.decodeSvg', () => {
+  it('keeps the blob URL alive until release() and revokes it on a load error', async () => {
+    const revoke = vi.fn();
+    vi.stubGlobal('URL', Object.assign(class extends URL {}, { createObjectURL: () => 'blob:x', revokeObjectURL: revoke }));
+    let fail = false;
+    vi.stubGlobal('Image', class {
+      naturalWidth = 10;
+      naturalHeight = 5;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_v: string) {
+        queueMicrotask(() => (fail ? this.onerror?.() : this.onload?.()));
+      }
+    });
+    try {
+      const decoded = await browserCodec.decodeSvg(new Blob(['<svg/>'], { type: 'image/svg+xml' }));
+      expect(decoded).toMatchObject({ width: 10, height: 5 });
+      expect(revoke).not.toHaveBeenCalled();
+      decoded.release?.();
+      expect(revoke).toHaveBeenCalledWith('blob:x');
+      fail = true;
+      revoke.mockClear();
+      await expect(browserCodec.decodeSvg(new Blob(['x']))).rejects.toThrow();
+      expect(revoke).toHaveBeenCalledWith('blob:x');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

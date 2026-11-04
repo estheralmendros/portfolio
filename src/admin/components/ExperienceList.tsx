@@ -9,9 +9,7 @@ export function ExperienceList({ state, ...handlers }: ListHandlers<Experience> 
   return (
     <CollectionList
       state={state}
-      path="content/experience.json"
-      plural="experience"
-      singular="experience"
+      section="experience"
       label={experienceLabel}
       renderItem={(e) => (
         <>

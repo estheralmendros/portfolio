@@ -45,7 +45,16 @@ describe('rateLimitMessage', () => {
 });
 
 describe('toAppError', () => {
-  it('maps a fetch TypeError to NetworkError', () => expect(toAppError(new TypeError('Failed to fetch'))).toBeInstanceOf(NetworkError));
+  it.each(['Failed to fetch', 'NetworkError when attempting to fetch resource.', 'Load failed', 'network error'])(
+    'maps a fetch-failure TypeError (%s) to NetworkError',
+    (msg) => expect(toAppError(new TypeError(msg))).toBeInstanceOf(NetworkError),
+  );
+  it('keeps other TypeErrors (programming bugs) as generic errors', () => {
+    const bug = new TypeError("Cannot read properties of undefined (reading 'sha')");
+    const err = toAppError(bug);
+    expect(err).not.toBeInstanceOf(NetworkError);
+    expect(err).toBe(bug);
+  });
   it('maps an object with status and response headers', () => {
     const err = Object.assign(new Error('x'), { status: 403, response: { headers: { 'x-ratelimit-remaining': '0' }, data: { message: 'x' } } });
     expect(toAppError(err)).toBeInstanceOf(RateLimitError);

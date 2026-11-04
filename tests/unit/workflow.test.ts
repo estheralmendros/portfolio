@@ -11,8 +11,15 @@ describe('deploy.yml', () => {
     expect(yml).toMatch(/push:\s*\n\s*branches: \[main\]/);
     expect(yml).toContain('workflow_dispatch');
     expect(yml).toMatch(/group: pages\s*\n\s*cancel-in-progress: false/);
-    expect(yml).toMatch(/pages: write/);
-    expect(yml).toMatch(/id-token: write/);
+  });
+  it('grants least privilege: top level contents: read only, pages/id-token write only on the deploy job', () => {
+    const topLevel = yml.slice(0, yml.indexOf('jobs:'));
+    expect(topLevel).toMatch(/^permissions:\s*\n\s+contents: read\s*\n(?!\s+\S+: )/m);
+    expect(topLevel).not.toContain('pages: write');
+    expect(topLevel).not.toContain('id-token: write');
+    expect(verify).not.toMatch(/pages: write|id-token: write/);
+    const deploy = yml.slice(yml.indexOf('  deploy:'));
+    expect(deploy).toMatch(/permissions:\s*\n\s+pages: write\s*\n\s+id-token: write/);
   });
   it('verify runs every gate in order before uploading dist/', () => {
     const steps = [

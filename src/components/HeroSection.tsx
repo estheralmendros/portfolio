@@ -55,14 +55,19 @@ export function HeroSection({ profile, photo, hasProjects = false }: { profile: 
               <MailIcon />
               <span className="sr-only">Email</span>
             </a>
-            <ExternalLink href={profile.socials.linkedin} className="icon-btn">
-              <LinkedInIcon />
-              <span className="sr-only">LinkedIn</span>
-            </ExternalLink>
-            <ExternalLink href={profile.socials.github} className="icon-btn">
-              <GitHubIcon />
-              <span className="sr-only">GitHub</span>
-            </ExternalLink>
+            {/* Always set on the public site (schema); the admin preview blanks a malformed URL (prd2 5.7). */}
+            {profile.socials.linkedin && (
+              <ExternalLink href={profile.socials.linkedin} className="icon-btn">
+                <LinkedInIcon />
+                <span className="sr-only">LinkedIn</span>
+              </ExternalLink>
+            )}
+            {profile.socials.github && (
+              <ExternalLink href={profile.socials.github} className="icon-btn">
+                <GitHubIcon />
+                <span className="sr-only">GitHub</span>
+              </ExternalLink>
+            )}
           </span>
         </div>
       </div>

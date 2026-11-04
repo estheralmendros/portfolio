@@ -125,6 +125,23 @@ export function createGitHubClient(opts: { token: string; fetch?: typeof fetch; 
     }
   };
 
+  /**
+   * After a lost ref-update response, head is neither our commit nor its parent: someone pushed on top.
+   * Our commit landed iff every file we wrote is still what we committed there (deletes still absent).
+   * A failing check counts as "not landed".
+   */
+  const landedUnder = async (head: string, changes: FileChange[], blobShas: Record<string, string>): Promise<boolean> => {
+    try {
+      for (const f of changes) {
+        const expected = 'delete' in f ? null : blobShas[f.path];
+        if ((await shaAt(f.path, head)) !== expected) return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   /** One attempt of steps 1–5; throws HeadMoved on a non-fast-forward ref update. */
   async function attempt(files: FileChange[], message: string, expectedShas: Record<string, string>) {
     const headSha = await readHead().catch((e: unknown) => {
@@ -163,7 +180,9 @@ export function createGitHubClient(opts: { token: string; fetch?: typeof fetch; 
         if (!isLostResponse(e)) throw e;
         // 5′: the update may have landed; re-read the ref instead of reporting a failure or committing twice.
         const now = await readHead().catch(() => null);
-        if (now !== commit.sha) throw new NetworkError('The ref update response was lost and the branch does not point to the new commit');
+        if (now !== commit.sha && !(now !== null && now !== headSha && (await landedUnder(now, changes, blobShas)))) {
+          throw new NetworkError('The ref update response was lost and the branch does not point to the new commit');
+        }
       }
       return { commitSha: commit.sha, blobShas };
     } catch (e) {

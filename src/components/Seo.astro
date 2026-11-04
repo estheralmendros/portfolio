@@ -10,25 +10,31 @@ interface Props {
   path: string;
   /** Absolute og:image (built by the page, e.g. with toOgImage); omitted -> SITE.defaultOgImage. Never derived here. */
   ogImage?: OgImage | undefined;
+  /** Text alternative for og:image / twitter:image (required: the caller falls back to the site name). */
+  imageAlt: string;
   type?: 'website' | 'article';
+  /** Not-indexable page (e.g. 404): emits robots noindex and no canonical / og:url. */
+  noindex?: boolean;
 }
 
-const { title, description, path, ogImage, type = 'website' } = Astro.props;
+const { title, description, path, ogImage, imageAlt, type = 'website', noindex = false } = Astro.props;
 const canonical = new URL(withBase(path), SITE.origin).href;
 const og: OgImage = ogImage ?? { url: new URL(withBase(SITE.defaultOgImage), SITE.origin).href };
 const hasSize = og.width != null && og.height != null;
 ---
 <title>{title}</title>
 <meta name="description" content={description}>
-<link rel="canonical" href={canonical}>
+{noindex ? <meta name="robots" content="noindex"> : <link rel="canonical" href={canonical}>}
 <meta property="og:title" content={title}>
 <meta property="og:description" content={description}>
-<meta property="og:url" content={canonical}>
+{!noindex && <meta property="og:url" content={canonical}>}
 <meta property="og:image" content={og.url}>
 {hasSize && <meta property="og:image:width" content={String(og.width)}>}
 {hasSize && <meta property="og:image:height" content={String(og.height)}>}
+<meta property="og:image:alt" content={imageAlt}>
 <meta property="og:type" content={type}>
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content={title}>
 <meta name="twitter:description" content={description}>
 <meta name="twitter:image" content={og.url}>
+<meta name="twitter:image:alt" content={imageAlt}>

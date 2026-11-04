@@ -120,7 +120,11 @@ export function useHashRoute(
 export function useBeforeUnload(active: boolean): void {
   useEffect(() => {
     if (!active) return;
-    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Older browsers only prompt when returnValue is set (deprecated in the DOM typings, hence the cast).
+      (e as { returnValue: unknown }).returnValue = '';
+    };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [active]);

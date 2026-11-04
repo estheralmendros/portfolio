@@ -9,9 +9,7 @@ export function ProjectsList({ state, ...handlers }: ListHandlers<Project> & { s
   return (
     <CollectionList
       state={state}
-      path="content/projects.json"
-      plural="projects"
-      singular="project"
+      section="projects"
       label={(p) => p.title}
       renderItem={(p) => (
         <>

@@ -6,15 +6,11 @@ import path from 'node:path';
 import { FakeGitHub, GOOD_TOKEN, OWNER, REPO } from './fakeGitHub';
 
 export const REPO_PATH = `/repos/${OWNER}/${REPO}`;
-export const IMAGES = path.resolve('tests/fixtures/images');
+const IMAGES = path.resolve('tests/fixtures/images');
 export const image = (name: string) => path.join(IMAGES, name);
 export const readImage = (name: string) => readFileSync(image(name));
 
 const FIXTURE_FILES = ['profile', 'skills', 'certifications', 'experience'] as const;
-
-export function fixtureJson<T = unknown>(name: 'profile' | 'projects' | 'skills' | 'certifications' | 'experience'): T {
-  return JSON.parse(readFileSync(path.resolve(`tests/fixtures/content/${name}.json`), 'utf8')) as T;
-}
 
 /** The default fake has only projects.json; the v2 admin needs every content file. */
 export function seededGitHub(): FakeGitHub {
@@ -23,10 +19,16 @@ export function seededGitHub(): FakeGitHub {
   return gh;
 }
 
-export async function loggedIn(page: Page) {
+/** Submits the login form with `token` (no assertion on the outcome). */
+export async function login(page: Page, token = GOOD_TOKEN) {
   await page.goto('admin/');
-  await page.getByLabel('GitHub fine-grained token').fill(GOOD_TOKEN);
+  await page.getByLabel('GitHub fine-grained token').fill(token);
   await page.getByRole('button', { name: 'Log in' }).click();
+}
+
+/** Logs in with the good token and waits for the Projects list. */
+export async function loggedIn(page: Page) {
+  await login(page);
   await expect(page.getByText('Fixture Alpha')).toBeVisible();
 }
 
@@ -52,6 +54,9 @@ export function putJson<T = unknown>(gh: FakeGitHub, index = 0): { message: stri
 
 /** Every path any recorded tree touched (writes and deletes). */
 export const treePaths = (gh: FakeGitHub) => gh.treeLog.flatMap((t) => t.tree.map((e) => e.path));
+
+/** The inert live-preview container (inside the "Preview" tab panel). */
+export const previewPane = (page: Page) => page.locator('[inert][aria-label="Preview"]');
 
 /** The deploy badge (the header's status region). */
 export const badge = (page: Page) => page.getByRole('banner').getByRole('status');

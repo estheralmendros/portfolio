@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isExternalUrl, withBase } from '../../src/lib/paths';
+import { withBase } from '../../src/lib/paths';
 
 describe('withBase', () => {
   it.each([
@@ -21,9 +21,4 @@ describe('withBase', () => {
   });
   it('does not treat a lookalike prefix as the base', () => expect(withBase('/portfolio-old/x')).toBe('/portfolio/portfolio-old/x'));
   it('never produces a double slash', () => expect(withBase('//x')).not.toContain('//x'));
-});
-
-describe('isExternalUrl', () => {
-  it.each(['https://a.com', 'http://a.com', 'mailto:x@y.z', '//a.com/x'])('%s is external', (u) => expect(isExternalUrl(u)).toBe(true));
-  it.each(['/a', 'a', '#x', './a'])('%s is internal', (u) => expect(isExternalUrl(u)).toBe(false));
 });

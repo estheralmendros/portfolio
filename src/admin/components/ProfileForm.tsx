@@ -1,21 +1,18 @@
-import { useMemo, useRef, useState, type SubmitEvent } from 'react';
+import { type SubmitEvent, useMemo, useState } from 'react';
 import { AvailabilitySchema, ProfileSchema, type Profile } from '../../content/schema';
 import { ContactSection } from '../../components/ContactSection';
 import { HeroSection } from '../../components/HeroSection';
-import { buildUploadPath } from '../../lib/uploads';
-import { useLastCommitSha } from '../adminContext';
 import { cvDeleteChange, cvFileChange, cvUrlFor, isUploadedCvUrl } from '../lib/cvUpload';
 import { issuesToFieldErrors } from '../lib/formUtils';
 import type { FileChange } from '../lib/githubClient';
 import type { Attachment } from '../lib/contentStore';
-import { checkTypedImageRef, finalizeUpload, type PendingUpload } from '../lib/imageProcessing';
-import { resolvePreviewImage } from '../lib/previewImage';
-import { AVAILABILITY_LABELS, CV_NOT_UPLOADED, IMAGE_NOT_UPLOADED } from '../messages';
-import { orPlaceholder } from '../previewValues';
+import type { PendingUpload } from '../lib/imageProcessing';
+import { AVAILABILITY_LABELS, CV_NOT_UPLOADED } from '../messages';
+import { httpsOrUndefined, orPlaceholder } from '../previewValues';
 import { CvField, type CvChange } from './CvField';
 import {
-  Field, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, differs, focusFirstError, useDirtyReport, useSaveRunner,
-  type FieldErrors, type SaveExtras,
+  Field, FormActions, FormLayout, REQUIRED_MESSAGE, SaveBanners, imageRef, isSavable, useEntryForm, useImageUpload,
+  type Checked, type FieldErrors, type SaveExtras,
 } from './formKit';
 import { ImageField, type ProcessFn } from './ImageField';
 import { PreviewPane } from './PreviewPane';
@@ -62,7 +59,7 @@ const toValues = (p: Profile): Values => ({
 
 /** Raw profile for the schema (key order = serialization order); pending uploads/removal applied. */
 function toRaw(v: Values, upload: PendingUpload | null, cv: CvChange) {
-  const photo = upload ? buildUploadPath('profile', PHOTO_SLUG, upload.image.ext, upload.shortId) : v.photo.trim();
+  const photo = imageRef('profile', v.photo, PHOTO_SLUG, upload);
   const cvUrl = cv.kind === 'upload' ? cvUrlFor(cv.shortId) : cv.kind === 'remove' ? '' : v.cvUrl.trim();
   return {
     name: v.name,
@@ -85,9 +82,11 @@ function previewProfile(v: Values, upload: PendingUpload | null, cv: CvChange): 
   const raw = toRaw(v, upload, cv);
   const parsed = ProfileSchema.safeParse(raw);
   if (parsed.success) return parsed.data;
-  const { photo: _photo, cvUrl, currentJob, ...rest } = raw;
+  const { photo: _photo, cvUrl, currentJob, socials, ...rest } = raw;
   return {
     ...rest,
+    // Only https:// links reach the (inert) preview; the email is a mailto: target (review S7).
+    socials: { email: socials.email, linkedin: httpsOrUndefined(socials.linkedin) ?? '', github: httpsOrUndefined(socials.github) ?? '' },
     ...(currentJob ? { currentJob: { role: orPlaceholder(currentJob.role), company: orPlaceholder(currentJob.company) } } : {}),
     name: orPlaceholder(v.name),
     title: orPlaceholder(v.title),
@@ -108,19 +107,21 @@ export function ProfileForm({
   onDirtyChange?: (dirty: boolean) => void;
   processImage?: ProcessFn;
 }) {
-  const [loaded] = useState(() => toValues(initial));
-  const [values, setValues] = useState(loaded);
-  const [upload, setUpload] = useState<PendingUpload | null>(null);
+  const image = useImageUpload('profile', initial.photo);
+  const { upload } = image;
   const [cv, setCv] = useState<CvChange>({ kind: 'none' });
-  const [errors, setErrors] = useState<FieldErrors<FieldName>>({});
-  const { saving, conflict, saveError, run } = useSaveRunner();
-  const formRef = useRef<HTMLFormElement>(null);
-  const commitRef = useLastCommitSha();
-  useDirtyReport(differs(values, loaded) || upload !== null || cv.kind !== 'none', onDirtyChange);
+  const form = useEntryForm({
+    initialValues: () => toValues(initial),
+    order: FIELD_ORDER,
+    extraDirty: upload !== null || cv.kind !== 'none',
+    busy: image.busy,
+    onDirtyChange,
+  });
+  const { values, errors, saving, conflict, saveError, formError, formRef } = form;
+  const set = <K extends keyof Values>(key: K, value: Values[K]) => form.set(key, value);
 
-  const set = <K extends keyof Values>(key: K, value: Values[K]) => setValues((v) => ({ ...v, [key]: value }));
-
-  const validate = (): Profile | null => {
+  /** One check for Save and the preview (review S1). */
+  const check = (): Checked<FieldName, Profile> => {
     const result = ProfileSchema.safeParse(toRaw(values, upload, cv));
     const fieldErrors: FieldErrors<FieldName> = {};
     if (!result.success) {
@@ -134,30 +135,21 @@ export function ProfileForm({
     if (jobFields.some((f) => values[f].trim() !== '')) {
       for (const f of jobFields) if (values[f].trim() === '') fieldErrors[f] = REQUIRED_MESSAGE;
     }
-    if (!upload) {
-      const typed = checkTypedImageRef(values.photo, initial.photo);
-      if (typed) fieldErrors.photo = typed;
-    }
-    setErrors(fieldErrors);
-    if (focusFirstError(formRef, FIELD_ORDER, fieldErrors)) return null;
-    return result.success ? result.data : null;
+    if (!upload) image.checkErrors(fieldErrors, 'photo', values.photo);
+    return { errors: fieldErrors, data: result.success ? result.data : null };
   };
+  const checked = check();
 
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (saving || conflict) return;
-    const profile = validate();
-    if (!profile) return;
-    const photo = upload;
-    const cvChange = cv;
-    void run(async () => {
+  const submit = (e: SubmitEvent<HTMLFormElement>) =>
+    form.submit(e, check, async (profile) => {
+      const cvChange = cv;
       const files: FileChange[] = [];
       const attachments: Attachment[] = [];
       let saved = profile;
+      const photo = await image.finalize(PHOTO_SLUG);
       if (photo) {
-        const { path, file } = await finalizeUpload('profile', PHOTO_SLUG, photo);
-        saved = { ...saved, photo: path };
-        files.push(file);
+        saved = { ...saved, photo: photo.path };
+        files.push(photo.file);
         attachments.push('image');
       }
       if (cvChange.kind === 'upload') {
@@ -170,7 +162,6 @@ export function ProfileForm({
       }
       await (files.length > 0 ? onSave(saved, { files, attachments }) : onSave(saved));
     });
-  };
 
   const input = (name: Exclude<FieldName, 'availability' | 'bio' | 'photo' | 'cvUrl'>, label: string, type = 'text', hint?: string) => (
     <Field name={name} label={label} required={REQUIRED.includes(name)} error={errors[name]} hint={hint}>
@@ -179,8 +170,8 @@ export function ProfileForm({
   );
 
   const snapshot = useMemo(() => ({ values, upload, cv }), [values, upload, cv]);
-  const previewValid = ProfileSchema.safeParse(toRaw(values, upload, cv)).success && (upload !== null || !checkTypedImageRef(values.photo, initial.photo));
-  const conflictNotes = [...(upload ? [IMAGE_NOT_UPLOADED] : []), ...(cv.kind === 'upload' ? [CV_NOT_UPLOADED] : [])];
+  const previewValid = isSavable(checked);
+  const conflictNotes = [...image.conflictNotes, ...(cv.kind === 'upload' ? [CV_NOT_UPLOADED] : [])];
 
   const preview = (
     <PreviewPane
@@ -188,7 +179,7 @@ export function ProfileForm({
       valid={previewValid}
       render={({ values: v, upload: up, cv: c }) => {
         const p = previewProfile(v, up, c);
-        const photo = resolvePreviewImage(up ? undefined : v.photo, { objectUrl: up?.objectUrl, commitRef });
+        const photo = image.previewImage(v.photo, up);
         return (
           <>
             <HeroSection profile={p} photo={photo} />
@@ -201,7 +192,7 @@ export function ProfileForm({
 
   return (
     <FormLayout aside={preview}>
-      <SaveBanners conflict={conflict} saveError={saveError} onReload={onReload} conflictNotes={conflictNotes} />
+      <SaveBanners conflict={conflict} saveError={saveError} formError={formError} onReload={onReload} conflictNotes={conflictNotes} />
       <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-4">
         {input('name', 'Name')}
         {input('title', 'Title')}
@@ -215,8 +206,7 @@ export function ProfileForm({
           alt={values.name}
           value={values.photo}
           onValueChange={(v) => set('photo', v)}
-          pending={upload}
-          onPendingChange={setUpload}
+          {...image.fieldProps}
           error={errors.photo}
           process={processImage}
         />
@@ -238,7 +228,7 @@ export function ProfileForm({
         {input('linkedin', 'LinkedIn URL', 'url')}
         {input('github', 'GitHub URL', 'url')}
         <CvField value={values.cvUrl} onValueChange={(v) => set('cvUrl', v)} change={cv} onChange={setCv} error={errors.cvUrl} />
-        <FormActions saving={saving} conflict={conflict} />
+        <FormActions saving={saving} conflict={conflict} busy={image.busy} />
       </form>
     </FormLayout>
   );

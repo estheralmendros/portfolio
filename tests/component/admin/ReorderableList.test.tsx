@@ -114,8 +114,9 @@ describe('ReorderableList', () => {
     await userEvent.click(down('A'));
     await userEvent.click(screen.getByRole('button', { name: 'Save order' }));
     expect(saved).toEqual([[item('b'), item('a'), item('c')]]);
-    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard' })).toBeDisabled();
+    // The bar buttons stay focusable (aria-disabled, not `disabled`) so focus never drops to <body> (A1-25).
+    expect(screen.getByRole('button', { name: 'Saving…' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Discard' })).toHaveAttribute('aria-disabled', 'true');
     expect(up('A')).toBeDisabled();
     expect(down('A')).toBeDisabled();
     release();
@@ -131,6 +132,55 @@ describe('ReorderableList', () => {
     expect(await screen.findByRole('button', { name: 'Save order' })).toBeEnabled();
     expect(names()).toEqual(['B', 'A', 'C']);
     expect(screen.getByText('Order changed —')).toBeInTheDocument();
+  });
+
+  describe('focus after the bar closes (review W9)', () => {
+    it('Save order: focus goes to the last-moved row\'s arrow', async () => {
+      setup();
+      await userEvent.click(down('A'));
+      await userEvent.click(screen.getByRole('button', { name: 'Save order' }));
+      await vi.waitFor(() => expect(screen.queryByText('Order changed —')).toBeNull());
+      expect(down('A')).toHaveFocus();
+    });
+
+    it('Discard: focus goes to the moved row\'s arrow (the enabled one at its restored position)', async () => {
+      setup();
+      await userEvent.click(down('B'));
+      await userEvent.click(down('B'));
+      expect(names()).toEqual(['A', 'C', 'B']);
+      await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
+      expect(names()).toEqual(['A', 'B', 'C']);
+      expect(down('B')).toHaveFocus();
+    });
+
+    it('while saving, Save order keeps focus (aria-disabled, not disabled) and ignores further clicks; Discard is inert too (A1-25)', async () => {
+      let release!: () => void;
+      const { saved } = setup({ onSaveOrder: () => new Promise<void>((r) => { release = r; }) });
+      await userEvent.click(down('A'));
+      screen.getByRole('button', { name: 'Save order' }).focus();
+      await userEvent.keyboard('{Enter}');
+      const busy = screen.getByRole('button', { name: 'Saving…' });
+      // A natively disabled button loses focus in real browsers; it must stay enabled-but-inert.
+      expect(busy).not.toBeDisabled();
+      expect(busy).toHaveAttribute('aria-disabled', 'true');
+      expect(busy).toHaveFocus();
+      await userEvent.keyboard('{Enter}');
+      await userEvent.click(busy);
+      await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
+      expect(saved).toHaveLength(1);
+      expect(names()).toEqual(['B', 'A', 'C']);
+      expect(screen.getByText('Order changed —')).toBeInTheDocument();
+      release();
+      await vi.waitFor(() => expect(screen.queryByText('Order changed —')).toBeNull());
+      expect(down('A')).toHaveFocus();
+    });
+
+    it('a failed save keeps focus on Save order', async () => {
+      setup({ onSaveOrder: async () => { throw new Error('nope'); } });
+      await userEvent.click(down('A'));
+      await userEvent.click(screen.getByRole('button', { name: 'Save order' }));
+      expect(await screen.findByRole('button', { name: 'Save order' })).toHaveFocus();
+    });
   });
 
   describe('grouped', () => {

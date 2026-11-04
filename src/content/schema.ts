@@ -45,6 +45,9 @@ export const ProfileSchema = z.strictObject({
 });
 
 const isObject = (payload: { value: unknown }) => typeof payload.value === 'object' && payload.value !== null;
+const isYearMonth = (v: unknown): v is string => YearMonthSchema.safeParse(v).success;
+/** `a` is on or after `b`; true (nothing to report here) while either date is itself invalid. */
+const notBefore = (a: unknown, b: unknown) => !isYearMonth(a) || !isYearMonth(b) || a >= b;
 
 export const ProjectSchema = z
   .strictObject({
@@ -67,8 +70,15 @@ export const SkillSchema = z.strictObject({
   id: SlugSchema,
   name: z.string().trim().min(1).max(40),
   category: SkillCategorySchema,
-  years: z.int().min(0).max(50).optional(),
-  icon: z.string().regex(/^[a-z0-9]+$/).optional(),
+  years: z
+    .int({ error: 'Use a whole number of years' })
+    .min(0, 'Must be between 0 and 50')
+    .max(50, 'Must be between 0 and 50')
+    .optional(),
+  icon: z
+    .string()
+    .regex(/^[a-z0-9]+$/, 'Use lowercase letters and numbers (Simple Icons slug)')
+    .optional(),
 });
 
 export const CertificationSchema = z
@@ -82,7 +92,12 @@ export const CertificationSchema = z
     credentialUrl: HttpsUrlSchema.optional(),
     badge: ImageRefSchema.optional(),
   })
-  .refine((c) => !c.expires || c.expires >= c.issued, { path: ['expires'], message: 'Must be on or after the issue date' });
+  // `when`: runs alongside field errors (one pass), like ProjectSchema; the guards cover the raw input.
+  .refine((c) => c.expires === undefined || notBefore(c.expires, c.issued), {
+    path: ['expires'],
+    message: 'Must be on or after the issue date',
+    when: isObject,
+  });
 
 export const ExperienceSchema = z
   .strictObject({
@@ -96,7 +111,11 @@ export const ExperienceSchema = z
     highlights: z.array(z.string().trim().min(1).max(200)).max(8),
     tags: TagsSchema,
   })
-  .refine((e) => e.end === null || e.end >= e.start, { path: ['end'], message: 'Must be on or after the start date' });
+  .refine((e) => e.end === null || notBefore(e.end, e.start), {
+    path: ['end'],
+    message: 'Must be on or after the start date',
+    when: isObject,
+  });
 
 const uniqueBy =
   <T>(key: (x: T) => string, label: string, field: 'id' | 'name') =>

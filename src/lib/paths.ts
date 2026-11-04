@@ -2,11 +2,6 @@ import { SITE } from '../config/site';
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 
-/** Absolute URL (has a scheme) or protocol-relative `//host`. */
-export function isExternalUrl(url: string): boolean {
-  return SCHEME_RE.test(url) || url.startsWith('//');
-}
-
 /**
  * Prefixes the site base: '/projects/x/' -> '/portfolio/projects/x/'.
  * Absolute URLs are unchanged; paths already under the base are returned as-is (idempotent); no '//' joins.

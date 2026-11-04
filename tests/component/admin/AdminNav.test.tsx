@@ -98,8 +98,12 @@ describe('AdminNav', () => {
   it('beforeunload is blocked only while dirty', () => {
     const { rerender } = render(<Harness dirty confirm={() => true} />);
     const dirtyEvent = new Event('beforeunload', { cancelable: true });
+    // Older browsers only show the prompt when returnValue is set (BeforeUnloadEvent's string returnValue).
+    let returnValue: unknown = 'untouched';
+    Object.defineProperty(dirtyEvent, 'returnValue', { get: () => returnValue, set: (v: unknown) => (returnValue = v) });
     fireEvent(window, dirtyEvent);
     expect(dirtyEvent.defaultPrevented).toBe(true);
+    expect(returnValue).toBe('');
     rerender(<Harness dirty={false} confirm={() => true} />);
     const cleanEvent = new Event('beforeunload', { cancelable: true });
     fireEvent(window, cleanEvent);

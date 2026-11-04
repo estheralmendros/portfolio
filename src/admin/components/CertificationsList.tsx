@@ -6,9 +6,7 @@ export function CertificationsList({ state, ...handlers }: ListHandlers<Certific
   return (
     <CollectionList
       state={state}
-      path="content/certifications.json"
-      plural="certifications"
-      singular="certification"
+      section="certifications"
       label={(c) => c.name}
       renderItem={(c) => (
         <>

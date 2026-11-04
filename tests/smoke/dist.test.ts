@@ -117,6 +117,20 @@ describe(`smoke: ${path.relative(process.cwd(), DIR) || DIR}`, () => {
     expect(html).toMatch(/<meta property="og:image" content="https:\/\/[^"]+">/);
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
     expect(html).toContain('<html lang="en"');
+    expect(html).not.toContain('<meta name="robots"');
+  });
+
+  it.each(publicPages)('%s: og:image and twitter:image carry a non-empty alt', (rel) => {
+    const html = read(rel);
+    expect(html).toMatch(/<meta property="og:image:alt" content="[^"]+">/);
+    expect(html).toMatch(/<meta name="twitter:image:alt" content="[^"]+">/);
+  });
+
+  it('404.html: noindex instead of a canonical URL', () => {
+    const html = read('404.html');
+    expect(html).toContain('<meta name="robots" content="noindex">');
+    expect(html).not.toContain('rel="canonical"');
+    expect(html).not.toContain('property="og:url"');
   });
 
   it.each(publicPages)('%s: og:image is absolute, never a raw upload path; width/height come together', (rel) => {
@@ -127,9 +141,11 @@ describe(`smoke: ${path.relative(process.cwd(), DIR) || DIR}`, () => {
     expect(html.includes('property="og:image:width"')).toBe(html.includes('property="og:image:height"'));
   });
 
-  it('index.html: the project filter (if rendered) is hidden by default and wired by an external module', () => {
+  it('index.html: the project filter (always in the fixture build) is hidden by default and wired by an external module', () => {
     const html = read('index.html');
     const filter = /<div\b[^>]*data-project-filter[^>]*>/.exec(html)?.[0];
+    // Fixture projects have tags, so the filter must render there; real content may legitimately have none.
+    if (IS_FIXTURE_BUILD) expect(filter, 'project filter missing from the fixture build').toBeDefined();
     if (!filter) return;
     expect(filter).toMatch(/\shidden(=""|\s|>)/);
     expect(filter).toContain('role="group"');
@@ -160,6 +176,13 @@ describe(`smoke: ${path.relative(process.cwd(), DIR) || DIR}`, () => {
       expect(js, path.relative(DIR, f)).not.toContain('fixture-000000');
     }
   });
+
+  if (!IS_FIXTURE_BUILD) {
+    it('real build ships no test-fixture upload images (they live in tests/fixtures/uploads)', () => {
+      const leaked = walk(DIR).map((f) => path.relative(DIR, f)).filter((f) => /(^|\/)fixture-[0-9a-f]{6}\./.test(f));
+      expect(leaked).toEqual([]);
+    });
+  }
 
   it('sitemap exists and excludes the admin', () => {
     expect(existsSync(path.join(DIR, 'sitemap-index.xml'))).toBe(true);

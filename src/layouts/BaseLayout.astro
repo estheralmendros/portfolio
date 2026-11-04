@@ -13,14 +13,17 @@ interface Props {
   description: string;
   path: string;
   ogImage?: OgImage | undefined;
+  /** og:image alt; omitted -> the site name (profile name). */
+  ogImageAlt?: string | undefined;
   type?: 'website' | 'article';
+  noindex?: boolean;
 }
 
 // Public-page CSP (shared-origin mitigation). Production builds only: Vite dev needs inline styles + HMR websocket.
 const CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'";
 const isProd = import.meta.env.PROD;
-const { title, description, path, ogImage, type } = Astro.props;
+const { title, description, path, ogImage, ogImageAlt, type, noindex } = Astro.props;
 const sections = visibleSections(content);
 ---
 <!doctype html>
@@ -30,7 +33,7 @@ const sections = visibleSections(content);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script is:inline src={withBase('/theme-init.js')}></script>
-    <Seo title={title} description={description} path={path} ogImage={ogImage} type={type} />
+    <Seo title={title} description={description} path={path} ogImage={ogImage} imageAlt={ogImageAlt || content.profile.name} type={type} noindex={noindex} />
     <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')}>
   </head>
   <body class="site flex min-h-screen flex-col">

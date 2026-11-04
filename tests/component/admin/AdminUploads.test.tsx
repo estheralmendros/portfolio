@@ -5,6 +5,7 @@ import { AdminApp } from '../../../src/admin/AdminApp';
 import { ConflictError } from '../../../src/admin/lib/errors';
 import type { ProcessedImage } from '../../../src/admin/lib/imageProcessing';
 import { fakeClient, profile } from './fakeClient';
+import { stubObjectUrls } from '../fixtures';
 
 const processImage = vi.fn(async (): Promise<ProcessedImage> => ({
   blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }), ext: 'jpg', width: 1600, height: 900,
@@ -13,8 +14,7 @@ const processImage = vi.fn(async (): Promise<ProcessedImage> => ({
 beforeEach(() => {
   sessionStorage.clear();
   window.history.replaceState(null, '', '#');
-  URL.createObjectURL = vi.fn(() => 'blob:http://localhost/x');
-  URL.revokeObjectURL = vi.fn();
+  stubObjectUrls();
 });
 afterEach(() => vi.restoreAllMocks());
 

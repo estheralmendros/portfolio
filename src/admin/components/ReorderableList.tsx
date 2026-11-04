@@ -41,6 +41,11 @@ export function ReorderableList<T extends { id: string }>({
   const [announcement, setAnnouncement] = useState('');
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const focusTarget = useRef<{ id: string; dir: Dir } | null>(null);
+  /** The last move: where focus goes when the bar closes (Save order / Discard), review W9. */
+  const lastMoved = useRef<{ id: string; dir: Dir } | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const requestFocusSave = useRef(false);
   const pending = !sameOrder(order, items);
 
   const pendingRef = useRef(onPendingChange);
@@ -52,14 +57,18 @@ export function ReorderableList<T extends { id: string }>({
   }, [pending]);
   useEffect(() => () => pendingRef.current?.(false), []);
 
+  // Runs once the buttons are enabled again (not while saving): the pressed arrow, else its sibling, else the
+  // first enabled toolbar button (+ New), so focus never drops to <body>.
   useLayoutEffect(() => {
     const target = focusTarget.current;
-    if (!target) return;
+    if (!target || saving) return;
     focusTarget.current = null;
     const pressed = buttons.current.get(`${target.id}:${target.dir}`);
     const other = buttons.current.get(`${target.id}:${target.dir === 'up' ? 'down' : 'up'}`);
-    (pressed && !pressed.disabled ? pressed : other)?.focus();
-  }, [order]);
+    const fallback = toolbarRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    const el = [pressed, other].find((b) => b && !b.disabled) ?? fallback;
+    el?.focus();
+  }, [order, saving]);
 
   const grouped = groups && groupOf;
   const sameGroup = grouped ? (a: T, b: T) => groupOf(a) === groupOf(b) : () => true;
@@ -69,20 +78,41 @@ export function ReorderableList<T extends { id: string }>({
     const next = moveEntry(order, it.id, dir, sameGroup);
     const group = next.filter((x) => sameGroup(x, it));
     focusTarget.current = { id: it.id, dir };
+    lastMoved.current = { id: it.id, dir };
     setOrder(next);
     setAnnouncement(movedAnnouncement(label(it), group.findIndex((x) => x.id === it.id) + 1, group.length));
   };
 
+  // Ref, not state: a second Enter can arrive before the `saving` re-render.
+  const savingRef = useRef(false);
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSaveOrder(order);
+      focusTarget.current = lastMoved.current;
     } catch {
       // The parent shows the error; the order stays pending so the owner can retry or discard.
+      requestFocusSave.current = true;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
+
+  const discard = () => {
+    if (savingRef.current) return;
+    focusTarget.current = lastMoved.current;
+    setOrder(items);
+  };
+
+  // After a failed save the bar stays: give focus back to "Save order" once it is enabled again.
+  useEffect(() => {
+    if (saving || !requestFocusSave.current) return;
+    requestFocusSave.current = false;
+    saveRef.current?.focus();
+  }, [saving]);
 
   const ctx: Ctx = { disabled: pending || saving };
   const ref = (key: string) => (el: HTMLButtonElement | null) => {
@@ -129,7 +159,11 @@ export function ReorderableList<T extends { id: string }>({
 
   return (
     <div className="flex flex-col gap-4">
-      {toolbar && <div className="flex justify-end">{toolbar(ctx)}</div>}
+      {toolbar && (
+        <div ref={toolbarRef} className="flex justify-end">
+          {toolbar(ctx)}
+        </div>
+      )}
       {order.length === 0
         ? empty
         : grouped
@@ -150,11 +184,13 @@ export function ReorderableList<T extends { id: string }>({
       {pending && (
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-accent bg-bg px-4 py-3 shadow-lg">
           <p className="font-medium">{ORDER_CHANGED}</p>
+          {/* aria-disabled, not `disabled`, while saving: a natively disabled button drops the focus to <body>
+              (validation A1-25). The handlers ignore activation while saving. */}
           <div className="flex gap-3">
-            <button type="button" className="btn-secondary" disabled={saving} onClick={() => setOrder(items)}>
+            <button type="button" className="btn-secondary" aria-disabled={saving || undefined} onClick={discard}>
               {DISCARD}
             </button>
-            <button type="button" className="btn-primary" disabled={saving} onClick={() => void save()}>
+            <button ref={saveRef} type="button" className="btn-primary" aria-disabled={saving || undefined} onClick={() => void save()}>
               {saving ? SAVING : SAVE_ORDER}
             </button>
           </div>

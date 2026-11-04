@@ -54,4 +54,48 @@ describe('ConfirmDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete project' }));
     expect(onConfirm).toHaveBeenCalledOnce();
   });
+
+  it('while busy: Cancel is disabled and Escape is ignored; both work again once idle (review W6)', async () => {
+    const onCancel = vi.fn();
+    const props = { title: 't', message: 'm', confirmLabel: 'Delete project', onConfirm: vi.fn(), onCancel };
+    const { rerender } = render(<ConfirmDialog {...props} busy />);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
+    await userEvent.keyboard('{Escape}');
+    expect(onCancel).not.toHaveBeenCalled();
+    rerender(<ConfirmDialog {...props} busy={false} />);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    await userEvent.keyboard('{Escape}');
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('when the opener is gone after close (deleted row), focus falls back to fallbackFocus (review S8d)', async () => {
+    function List() {
+      const [rows, setRows] = useState(['a', 'b']);
+      const [open, setOpen] = useState<string | null>(null);
+      return (
+        <>
+          <button type="button" id="new-entry">+ New</button>
+          {rows.map((r) => (
+            <button key={r} type="button" onClick={() => setOpen(r)}>{`Delete ${r}`}</button>
+          ))}
+          {open && (
+            <ConfirmDialog
+              title="t"
+              message="m"
+              confirmLabel="Delete project"
+              fallbackFocus={() => document.getElementById('new-entry')}
+              onConfirm={() => { setRows((x) => x.filter((y) => y !== open)); setOpen(null); }}
+              onCancel={() => setOpen(null)}
+            />
+          )}
+        </>
+      );
+    }
+    render(<List />);
+    await userEvent.click(screen.getByRole('button', { name: 'Delete a' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete project' }));
+    expect(screen.queryByRole('button', { name: 'Delete a' })).toBeNull();
+    expect(screen.getByRole('button', { name: '+ New' })).toHaveFocus();
+  });
 });

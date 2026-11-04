@@ -217,7 +217,7 @@ describe('AdminApp reorder', () => {
   });
 });
 
-describe('AdminApp errors on every screen', () => {
+describe('AdminApp errors: one sampled error per section screen', () => {
   it('403 on a skills delete shows the no-longer-write message', async () => {
     const { client } = setup();
     await login();

@@ -14,7 +14,9 @@ test.describe('home page', () => {
     const nav = page.getByRole('navigation', { name: 'Sections', exact: true });
     await expect(nav.getByRole('link')).toHaveText(['About', 'Projects', 'Stack', 'Certifications', 'Journey', 'Contact']);
     await expect(page.getByText('Available for freelance')).toBeVisible();
-    await expect(page.getByText(`© ${new Date().getUTCFullYear()} Fixture Person`)).toBeVisible();
+    // The year is baked in at build time: accept the previous UTC year too (build:test may predate a New Year).
+    const year = new Date().getUTCFullYear();
+    await expect(page.getByText(new RegExp(`^© (${year}|${year - 1}) Fixture Person`))).toBeVisible();
   });
 
   test('featured projects first, then more projects', async ({ page }) => {

@@ -109,7 +109,18 @@ describe('loadCollection', () => {
   });
 });
 
+describe('COLLECTIONS', () => {
+  it('holds only the path and schema of each file (section labels live in src/admin/sections.ts)', () => {
+    for (const c of Object.values(COLLECTIONS)) expect(Object.keys(c).sort()).toEqual(['path', 'schema']);
+  });
+});
+
 describe('saveCollection', () => {
+  it('returns the Zod-parsed data it committed', async () => {
+    const client = fakeClient();
+    const res = await saveCollection(client, 'projects', [{ ...p('a'), title: '  A  ' }], 'sha1', 'm');
+    expect(res.data[0]!.title).toBe('A');
+  });
   it('rejects invalid data without calling the client', async () => {
     const client = fakeClient();
     await expect(saveCollection(client, 'projects', [{ ...p('a'), date: 'bad' }], 'sha1', 'm')).rejects.toBeInstanceOf(ValidationError);
@@ -118,7 +129,7 @@ describe('saveCollection', () => {
   it('puts the serialized parsed data with the sha and message', async () => {
     const client = fakeClient();
     const res = await saveCollection(client, 'projects', [p('a')], 'sha1', 'content(projects): add "a"');
-    expect(res).toEqual({ sha: 'sha2', commitSha: 'c1' });
+    expect(res).toEqual({ sha: 'sha2', commitSha: 'c1', data: [p('a')] });
     expect(client.putFile).toHaveBeenCalledWith({
       path: 'content/projects.json',
       content: serializeCollection([p('a')]),
@@ -197,7 +208,7 @@ describe('saveCollectionWithFiles', () => {
   it('without extra files uses the Contents API (saveCollection)', async () => {
     const client = v2Client();
     const res = await saveCollectionWithFiles(client, 'projects', [p('a')], 'sha1', 'm', []);
-    expect(res).toEqual({ sha: 'put-sha', commitSha: 'put-commit' });
+    expect(res).toEqual({ sha: 'put-sha', commitSha: 'put-commit', data: [p('a')] });
     expect(client.putFile).toHaveBeenCalledOnce();
     expect(client.commitFiles).not.toHaveBeenCalled();
   });
@@ -205,7 +216,7 @@ describe('saveCollectionWithFiles', () => {
   it('with files makes one commitFiles call: JSON first, expected SHA of the collection', async () => {
     const client = v2Client();
     const res = await saveCollectionWithFiles(client, 'projects', withImage, 'sha1', 'content(projects): update "a" (+image)', [image]);
-    expect(res).toEqual({ sha: 'blob:content/projects.json', commitSha: 'git-commit' });
+    expect(res).toEqual({ sha: 'blob:content/projects.json', commitSha: 'git-commit', data: COLLECTIONS.projects.schema.parse(withImage) });
     expect(client.putFile).not.toHaveBeenCalled();
     expect(client.commitFiles).toHaveBeenCalledWith({
       files: [{ path: 'content/projects.json', content: serializeCollection(COLLECTIONS.projects.schema.parse(withImage)), encoding: 'utf-8' }, image],
@@ -238,7 +249,8 @@ describe('saveCollectionWithFiles', () => {
 
   it('serializes the parsed data (trimmed strings)', async () => {
     const client = v2Client();
-    await saveCollectionWithFiles(client, 'projects', [{ ...p('a'), title: '  A  ' }], 'sha1', 'm', [image]);
+    const res = await saveCollectionWithFiles(client, 'projects', [{ ...p('a'), title: '  A  ' }], 'sha1', 'm', [image]);
+    expect(res.data[0]!.title).toBe('A');
     const files = (client.commitFiles.mock.calls[0]![0] as { files: { content: string }[] }).files;
     expect(JSON.parse(files[0]!.content)[0].title).toBe('A');
   });

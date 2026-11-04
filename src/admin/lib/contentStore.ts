@@ -12,11 +12,11 @@ import type { Skill } from '../../content/schema';
 import type { FileChange, GitHubClient } from './githubClient';
 
 export const COLLECTIONS = {
-  profile: { path: 'content/profile.json', schema: ProfileSchema, label: 'Profile' },
-  projects: { path: 'content/projects.json', schema: ProjectsFileSchema, label: 'Projects' },
-  skills: { path: 'content/skills.json', schema: SkillsFileSchema, label: 'Skills' },
-  certifications: { path: 'content/certifications.json', schema: CertificationsFileSchema, label: 'Certifications' },
-  experience: { path: 'content/experience.json', schema: ExperienceFileSchema, label: 'Experience' },
+  profile: { path: 'content/profile.json', schema: ProfileSchema },
+  projects: { path: 'content/projects.json', schema: ProjectsFileSchema },
+  skills: { path: 'content/skills.json', schema: SkillsFileSchema },
+  certifications: { path: 'content/certifications.json', schema: CertificationsFileSchema },
+  experience: { path: 'content/experience.json', schema: ExperienceFileSchema },
 } as const;
 
 export type CollectionName = keyof typeof COLLECTIONS;
@@ -48,24 +48,33 @@ export async function loadCollection<K extends CollectionName>(client: GitHubCli
   return { data: result.data as CollectionData<K>, sha };
 }
 
-/** Validates the whole file; ValidationError (no request) when it would be invalid. */
-function serializeValid<K extends CollectionName>(name: K, data: CollectionData<K>): string {
+/** Validates the whole file; ValidationError (no request) when it would be invalid. Returns the parsed data too. */
+function serializeValid<K extends CollectionName>(name: K, data: CollectionData<K>): { content: string; data: CollectionData<K> } {
   const { path, schema } = COLLECTIONS[name];
   const result = schema.safeParse(data);
   if (!result.success) throw new ValidationError(`${path} would be invalid`, result.error.issues);
-  return serializeCollection(result.data);
+  const parsed = result.data as CollectionData<K>;
+  return { content: serializeCollection(parsed), data: parsed };
 }
 
-/** Re-validates the whole file first (ValidationError, no request), then commits it. */
+/** What a save committed: the new JSON blob SHA, the commit SHA and the Zod-parsed data that was written. */
+export interface SaveResult<K extends CollectionName> {
+  sha: string;
+  commitSha: string;
+  data: CollectionData<K>;
+}
+
+/** Re-validates the whole file first (ValidationError, no request), then commits it (Contents API). */
 export async function saveCollection<K extends CollectionName>(
   client: GitHubClient,
   name: K,
   data: CollectionData<K>,
   sha: string,
   message: string,
-): Promise<{ sha: string; commitSha: string }> {
-  const content = serializeValid(name, data);
-  return client.putFile({ path: COLLECTIONS[name].path, content, sha, message });
+): Promise<SaveResult<K>> {
+  const valid = serializeValid(name, data);
+  const res = await client.putFile({ path: COLLECTIONS[name].path, content: valid.content, sha, message });
+  return { ...res, data: valid.data };
 }
 
 /**
@@ -79,16 +88,16 @@ export async function saveCollectionWithFiles<K extends CollectionName>(
   sha: string,
   message: string,
   extraFiles: FileChange[],
-): Promise<{ sha: string; commitSha: string }> {
-  const content = serializeValid(name, data);
+): Promise<SaveResult<K>> {
+  if (extraFiles.length === 0) return saveCollection(client, name, data, sha, message);
+  const valid = serializeValid(name, data);
   const { path } = COLLECTIONS[name];
-  if (extraFiles.length === 0) return client.putFile({ path, content, sha, message });
   const { commitSha, blobShas } = await client.commitFiles({
-    files: [{ path, content, encoding: 'utf-8' }, ...extraFiles],
+    files: [{ path, content: valid.content, encoding: 'utf-8' }, ...extraFiles],
     message,
     expectedShas: { [path]: sha },
   });
-  return { sha: blobShas[path] ?? '', commitSha };
+  return { sha: blobShas[path] ?? '', commitSha, data: valid.data };
 }
 
 export type CommitAction = 'add' | 'update' | 'delete' | 'reorder';
